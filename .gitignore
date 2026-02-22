@@ -1,0 +1,66 @@
+# =========================
+# Node / NestJS
+# =========================
+node_modules/
+dist/
+coverage/
+
+# =========================
+# Environment files
+# =========================
+.env
+.env.*
+!.env.example
+.next/
+
+# =========================
+# Logs
+# =========================
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# OS / Editor
+# =========================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# =========================
+# Build & Cache
+# =========================
+.cache/
+.eslintcache
+tsconfig.tsbuildinfo
+
+# =========================
+# Test
+# =========================
+test-results/
+coverage/
+
+# =========================
+# Docker (optional)
+# =========================
+docker-data/
+
+# =========================
+# Prisma / TypeORM (optional)
+# =========================
+prisma/migrations/**/migration_lock.toml
+
+# =========================
+# Uploads / Storage (IMPORTANT)
+# =========================
+uploads/
+public/uploads/
+storage/
+
+# =========================
+# Secrets
+# =========================
+*.pem
+*.key
