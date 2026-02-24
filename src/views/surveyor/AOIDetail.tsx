@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { ArrowLeft, MapPin, Camera, CircleCheck as CheckCircle, Clock, CircleAlert as AlertCircle, Play, Send, Navigation } from "lucide-react";
@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSurveyor } from "@/hooks/useSurveyor";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ImageWithSkeleton } from "@/components/ui/ImageWithSkeleton";
 import dynamic from "next/dynamic";
 import { Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { AddPoiModal } from "@/components/modals/AddPoiModal";
 import { StatusRestrictionModal } from "@/components/modals/StatusRestrictionModal";
+import { ConfirmAddPhotoModal } from "@/components/modals/ConfirmAddPhotoModal";
 
 const AOIMap = dynamic(() => import("@/components/AOIMap"), {
   ssr: false,
@@ -26,17 +28,24 @@ const AOIMap = dynamic(() => import("@/components/AOIMap"), {
 
 export default function AOIDetail() {
   const params = useParams();
+  const router = useRouter();
   const id = params?.id as string;
-  const { useAssignedAoiDetail, usePois, createPoi, startAoi, submitAoi } = useSurveyor();
+  const { useAssignedAoiDetail, usePois, useMyUploads, createPoi, startAoi, submitAoi } = useSurveyor();
   const { data: aoi, isLoading, isError, error } = useAssignedAoiDetail(id);
   const { data: poisResponse, isLoading: isLoadingPois } = usePois(id);
+  const { data: uploadsResponse, isLoading: isLoadingUploads } = useMyUploads();
   const [activeTab, setActiveTab] = useState("pois");
   const [isAddingPoi, setIsAddingPoi] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [isConfirmPhotoModalOpen, setIsConfirmPhotoModalOpen] = useState(false);
 
   const pois = useMemo(() => poisResponse || [], [poisResponse]);
+  const aoiPhotos = useMemo(() => {
+    if (!uploadsResponse) return [];
+    return uploadsResponse.filter((photo: any) => photo.aoi_id === id);
+  }, [uploadsResponse, id]);
 
   if (isLoading) {
     return (
@@ -116,7 +125,11 @@ export default function AOIDetail() {
 
   const handleStart = () => {
     startAoi.mutate(id, {
-      onSuccess: () => toast.success("AOI started successfully"),
+      onSuccess: () => {
+        toast.success("AOI started successfully");
+        // Create initial blank POI as requested
+        createPoi.mutate({ aoi_id: id });
+      },
       onError: (err: any) => toast.error(err?.response?.data?.message || "Failed to start AOI"),
     });
   };
@@ -147,6 +160,31 @@ export default function AOIDetail() {
     }
     setIsAddingPoi(true);
     startTracking();
+  };
+
+  const handleAddPoiPhotoClick = () => {
+    const status = aoi.status?.toLowerCase();
+    if (status === "assigned") {
+      toast.error("Please start the AOI first");
+      return;
+    }
+    if (["completed", "submitted", "closed"].includes(status)) {
+      setIsStatusModalOpen(true);
+      return;
+    }
+
+    setIsConfirmPhotoModalOpen(true);
+  };
+
+  const handleConfirmAddPhoto = async () => {
+    try {
+      const newPoi = await createPoi.mutateAsync({ aoi_id: id });
+      setIsConfirmPhotoModalOpen(false);
+      toast.success("POI created. Opening camera...");
+      router.push(`/surveyor/capture/${newPoi.id}`);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to create POI");
+    }
   };
 
   return (
@@ -261,60 +299,118 @@ export default function AOIDetail() {
               </CardContent>
             </Card>
 
-            {/* POI List */}
+            {/* POI & Photos Tabs */}
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <CardTitle>Points of Interest ({pois.length})</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={handleAddPoiClick}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add POI
-                  </Button>
-                  <AddPoiModal
-                    isOpen={isAddingPoi}
-                    onOpenChange={setIsAddingPoi}
-                    isLocating={isLocating}
-                    location={location}
-                    startTracking={startTracking}
-                    handleCreatePoi={handleCreatePoi}
-                    isPending={createPoi.isPending}
-                  />
+              <CardHeader className="pb-0">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="pois">POIs ({pois.length})</TabsTrigger>
+                      <TabsTrigger value="photos">Photos ({aoiPhotos.length})</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={handleAddPoiClick}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add POI
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleAddPoiPhotoClick} disabled={createPoi.isPending}>
+                      <Camera className="w-4 h-4 mr-2" />
+                      Add Photo
+                    </Button>
+                  </div>
                 </div>
+                <AddPoiModal
+                  isOpen={isAddingPoi}
+                  onOpenChange={setIsAddingPoi}
+                  isLocating={isLocating}
+                  location={location}
+                  startTracking={startTracking}
+                  handleCreatePoi={handleCreatePoi}
+                  isPending={createPoi.isPending}
+                />
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {pois.map((poi: any) => (
-                    <Link key={poi.id} href={`/surveyor/capture/${poi.id}`}>
-                      <div className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                        <div className="flex items-start gap-3">
-                          <div className="mt-1">
-                            {getStatusIcon(poi.status)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold mb-1">{poi.business_name}</h4>
-                            <p className="text-sm text-gray-600 mb-2">{poi.address}</p>
-                            <div className="flex items-center gap-4 text-xs text-gray-500">
-                              {/* <span className="flex items-center gap-1">
-                                <Camera className="w-3 h-3" />
-                                {poi.photos} photos
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3" />
-                                {poi.distance}
-                              </span> */}
+              <CardContent className="pt-6">
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                  <TabsContent value="pois" className="mt-0 space-y-3">
+                    {pois.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">No POIs created yet</div>
+                    ) : (
+                      pois.map((poi: any) => (
+                        <Link key={poi.id} href={`/surveyor/capture/${poi.id}`}>
+                          <div className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                            <div className="flex items-start gap-3">
+                              <div className="mt-1">
+                                {getStatusIcon(poi.status)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold mb-1">{poi.business_name || "Unnamed POI"}</h4>
+                                <p className="text-sm text-gray-600 mb-2">{poi.address || "No address provided"}</p>
+                              </div>
+                              <Badge variant={
+                                poi.status === "completed" ? "default" :
+                                  poi.status === "in_progress" ? "secondary" : "outline"
+                              }>
+                                {poi.status.replace("_", " ")}
+                              </Badge>
                             </div>
                           </div>
-                          <Badge variant={
-                            poi.status === "completed" ? "default" :
-                              poi.status === "in_progress" ? "secondary" : "outline"
-                          }>
-                            {poi.status.replace("_", " ")}
-                          </Badge>
-                        </div>
+                        </Link>
+                      ))
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="photos" className="mt-0 space-y-3">
+                    {isLoadingUploads ? (
+                      <div className="space-y-3">
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-24 w-full" />
                       </div>
-                    </Link>
-                  ))}
-                </div>
+                    ) : aoiPhotos.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">No photos uploaded for this AOI</div>
+                    ) : (
+                      aoiPhotos.map((photo: any) => (
+                        <Link key={photo.id} href={`/surveyor/capture/${photo.poi_id}`}>
+                          <div className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                            <div className="flex gap-4">
+                              <div className="w-20 h-20 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
+                                <ImageWithSkeleton
+                                  src={photo.photo_url}
+                                  alt={photo.photo_type}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-1">
+                                  <Badge variant="outline" className="text-[10px] uppercase font-bold text-gray-600">
+                                    {photo.photo_type.replace("_", " ")}
+                                  </Badge>
+                                  <span className="text-[10px] text-gray-500">
+                                    {new Date(photo.created_at).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-600 truncate mb-2">
+                                  POI: {pois.find((p: any) => p.id === photo.poi_id)?.business_name || "Unknown POI"}
+                                </p>
+                                <div className="flex items-center justify-between">
+                                  <Badge variant={
+                                    photo.status === "APPROVED" ? "default" :
+                                      photo.status === "REJECTED" ? "destructive" : "secondary"
+                                  } className="text-[10px]">
+                                    {photo.status}
+                                  </Badge>
+                                  {photo.status === "REJECTED" && (
+                                    <span className="text-[10px] text-red-500 font-medium">Action Required</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      ))
+                    )}
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           </div>
@@ -399,6 +495,13 @@ export default function AOIDetail() {
         isOpen={isStatusModalOpen}
         onOpenChange={setIsStatusModalOpen}
         status={aoi.status}
+      />
+
+      <ConfirmAddPhotoModal
+        isOpen={isConfirmPhotoModalOpen}
+        onOpenChange={setIsConfirmPhotoModalOpen}
+        onConfirm={handleConfirmAddPhoto}
+        isPending={createPoi.isPending}
       />
     </div>
   );
