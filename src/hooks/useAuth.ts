@@ -9,7 +9,9 @@ export const useAuth = () => {
     const loginMutation = useMutation({
         mutationFn: authService.login,
         onSuccess: (data) => {
-            setPendingUser(data.user);
+            // Bypass OTP: Direct login with data from /auth/login
+            syncLogin(data.user, data.access_token);
+            // setPendingUser(data.user); // Original OTP flow
         },
     });
 

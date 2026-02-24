@@ -25,8 +25,11 @@ export default function Login() {
       { email, password },
       {
         onSuccess: (data) => {
+          toast.success("Login successful!");
+          router.push("/role-detection");
+          /* 
+          // Original OTP Flow:
           toast.success("Credentials verified! Sending OTP...");
-          // Request OTP after successful password verification
           requestOtp.mutate(email, {
             onSuccess: () => {
               toast.success("OTP sent to your email!");
@@ -36,6 +39,7 @@ export default function Login() {
               toast.error(error.response?.data?.message || "Failed to send OTP. Please try again.");
             }
           });
+          */
         },
         onError: (error: any) => {
           toast.error(error.response?.data?.message || "Login failed. Please check your credentials.");
