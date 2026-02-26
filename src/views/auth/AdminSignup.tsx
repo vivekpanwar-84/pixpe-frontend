@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
-import { ClipboardCheck, Mail, Lock, Eye, EyeOff, UserPlus, User } from "lucide-react";
+import { ClipboardCheck, Mail, Lock, Eye, EyeOff, UserPlus, User, Phone, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,28 +10,53 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
-export default function AdminSignup() {
+const ROLES = [
+    { value: "admin", label: "Admin — Full system access" },
+    { value: "manager", label: "Manager — AOI & team management" },
+    { value: "editor", label: "Editor — Photo review & analysis" },
+    { value: "surveyor", label: "Surveyor — Field photo capture" },
+];
+
+export default function Signup() {
     const router = useRouter();
-    const { signupAdmin } = useAuth();
+    const { signup } = useAuth();
     const [showPassword, setShowPassword] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
         email: "",
+        phone: "",
         password: "",
+        role: "",
     });
 
     const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        signupAdmin.mutate(formData, {
-            onSuccess: () => {
-                toast.success("Admin account created successfully! Please login.");
-                router.push("/login");
+        if (!formData.role) {
+            toast.error("Please select a role to continue.");
+            return;
+        }
+
+        signup.mutate(
+            {
+                name: formData.name,
+                email: formData.email,
+                password: formData.password,
+                phone: formData.phone || undefined,
+                role: formData.role,
             },
-            onError: (error: any) => {
-                toast.error(error.response?.data?.message || "Signup failed. Please try again.");
-            },
-        });
+            {
+                onSuccess: (data) => {
+                    toast.success(`Account created! Welcome, ${data.user?.name}!`);
+                    router.push("/role-detection");
+                },
+                onError: (error: any) => {
+                    toast.error(
+                        error.response?.data?.message || "Signup failed. Please try again."
+                    );
+                },
+            }
+        );
     };
 
     return (
@@ -44,18 +69,20 @@ export default function AdminSignup() {
                 <Card className="shadow-xl">
                     <CardHeader className="text-center space-y-4">
                         <div className="mx-auto bg-blue-600 rounded-2xl p-4 w-fit">
-                            <UserPlus className="w-10 h-10 text-white" />
+                            <ClipboardCheck className="w-10 h-10 text-white" />
                         </div>
                         <div>
-                            <CardTitle className="text-2xl md:text-3xl">Admin Registration</CardTitle>
+                            <CardTitle className="text-2xl md:text-3xl">Create Account</CardTitle>
                             <CardDescription className="mt-2">
-                                Create a new administrator account
+                                Join Pixpe — sign up to get started
                             </CardDescription>
                         </div>
                     </CardHeader>
 
                     <CardContent>
                         <form onSubmit={handleSignup} className="space-y-4">
+
+                            {/* Full Name */}
                             <div className="space-y-2">
                                 <Label htmlFor="name">Full Name</Label>
                                 <div className="relative">
@@ -72,6 +99,7 @@ export default function AdminSignup() {
                                 </div>
                             </div>
 
+                            {/* Email */}
                             <div className="space-y-2">
                                 <Label htmlFor="email">Email Address</Label>
                                 <div className="relative">
@@ -79,7 +107,7 @@ export default function AdminSignup() {
                                     <Input
                                         id="email"
                                         type="email"
-                                        placeholder="admin@pixpe.com"
+                                        placeholder="you@example.com"
                                         className="pl-10"
                                         value={formData.email}
                                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -88,6 +116,26 @@ export default function AdminSignup() {
                                 </div>
                             </div>
 
+                            {/* Phone (optional) */}
+                            <div className="space-y-2">
+                                <Label htmlFor="phone">
+                                    Phone Number{" "}
+                                    <span className="text-gray-400 font-normal text-xs">(optional)</span>
+                                </Label>
+                                <div className="relative">
+                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                    <Input
+                                        id="phone"
+                                        type="tel"
+                                        placeholder="+91 98765 43210"
+                                        className="pl-10"
+                                        value={formData.phone}
+                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Password */}
                             <div className="space-y-2">
                                 <Label htmlFor="password">Password</Label>
                                 <div className="relative">
@@ -95,28 +143,54 @@ export default function AdminSignup() {
                                     <Input
                                         id="password"
                                         type={showPassword ? "text" : "password"}
-                                        placeholder="Create a strong password"
+                                        placeholder="Min. 6 characters"
                                         className="pl-10 pr-10"
                                         value={formData.password}
                                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                         required
+                                        minLength={6}
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                                     >
-                                        {showPassword ? (
-                                            <EyeOff className="w-5 h-5" />
-                                        ) : (
-                                            <Eye className="w-5 h-5" />
-                                        )}
+                                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                     </button>
                                 </div>
                             </div>
 
-                            <Button type="submit" className="w-full" size="lg" disabled={signupAdmin.isPending}>
-                                {signupAdmin.isPending ? "Registering..." : "Register Admin"}
+                            {/* Role Dropdown */}
+                            <div className="space-y-2">
+                                <Label htmlFor="role">Select Role</Label>
+                                <div className="relative">
+                                    <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none z-10" />
+                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none z-10" />
+                                    <select
+                                        id="role"
+                                        value={formData.role}
+                                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                                        required
+                                        className="w-full h-10 pl-10 pr-10 rounded-md border border-input bg-background text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 appearance-none cursor-pointer text-gray-700"
+                                    >
+                                        <option value="" disabled>Choose your role...</option>
+                                        {ROLES.map((r) => (
+                                            <option key={r.value} value={r.value}>
+                                                {r.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Submit */}
+                            <Button
+                                type="submit"
+                                className="w-full"
+                                size="lg"
+                                disabled={signup.isPending}
+                            >
+                                {signup.isPending ? "Creating Account..." : "Create Account"}
                             </Button>
 
                             <div className="text-center text-sm text-gray-600">

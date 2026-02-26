@@ -20,4 +20,10 @@ export const authService = {
         const response = await api.post('/auth/admin/signup', data);
         return response.data;
     },
+
+    signup: async (data: { name: string; email: string; password: string; phone?: string; role: string }) => {
+        const response = await api.post('/auth/signup', data);
+        return response.data;
+    },
 };
+

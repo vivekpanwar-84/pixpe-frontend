@@ -38,11 +38,21 @@ export const useAuth = () => {
         mutationFn: authService.createAdmin,
     });
 
+    const signupMutation = useMutation({
+        mutationFn: authService.signup,
+        onSuccess: (data) => {
+            // Auto login after signup
+            syncLogin(data.user, data.access_token);
+        },
+    });
+
     return {
         login: loginMutation,
         requestOtp: requestOtpMutation,
         verifyOtp: verifyOtpMutation,
         signupAdmin: signupAdminMutation,
+        signup: signupMutation,
         useProfile,
     };
 };
+
