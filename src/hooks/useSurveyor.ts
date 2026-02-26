@@ -19,21 +19,6 @@ export const useSurveyor = () => {
         });
     };
 
-    const usePois = (aoiId?: string) => {
-        return useQuery({
-            queryKey: ['pois', aoiId],
-            queryFn: () => surveyorService.getPois(aoiId),
-        });
-    };
-
-    const usePoiDetail = (id: string) => {
-        return useQuery({
-            queryKey: ['pois', id],
-            queryFn: () => surveyorService.getPoiById(id),
-            enabled: !!id,
-        });
-    };
-
     const useMyUploads = () => {
         return useQuery({
             queryKey: ['photos', 'my-uploads'],
@@ -55,17 +40,6 @@ export const useSurveyor = () => {
         },
     });
 
-    const createPoiMutation = useMutation({
-        mutationFn: surveyorService.createPoi,
-        onSuccess: (data, variables) => {
-            queryClient.invalidateQueries({ queryKey: ['aois', 'assigned'] });
-            if (variables.aoi_id) {
-                queryClient.invalidateQueries({ queryKey: ['aois', 'assigned', variables.aoi_id] });
-                queryClient.invalidateQueries({ queryKey: ['pois', variables.aoi_id] });
-            }
-        },
-    });
-
     const uploadPhotoMutation = useMutation({
         mutationFn: surveyorService.uploadPhoto,
         onSuccess: () => {
@@ -83,12 +57,9 @@ export const useSurveyor = () => {
     return {
         useAssignedAois,
         useAssignedAoiDetail,
-        usePois,
-        usePoiDetail,
         useMyUploads,
         startAoi: startAoiMutation,
         submitAoi: submitAoiMutation,
-        createPoi: createPoiMutation,
         uploadPhoto: uploadPhotoMutation,
         deletePhoto: deletePhotoMutation,
     };

@@ -13,13 +13,8 @@ import { useSurveyor } from "@/hooks/useSurveyor";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ImageWithSkeleton } from "@/components/ui/ImageWithSkeleton";
 import dynamic from "next/dynamic";
-import { Plus } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { AddPoiModal } from "@/components/modals/AddPoiModal";
 import { StatusRestrictionModal } from "@/components/modals/StatusRestrictionModal";
-import { ConfirmAddPhotoModal } from "@/components/modals/ConfirmAddPhotoModal";
 
 const AOIMap = dynamic(() => import("@/components/AOIMap"), {
   ssr: false,
@@ -30,18 +25,14 @@ export default function AOIDetail() {
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
-  const { useAssignedAoiDetail, usePois, useMyUploads, createPoi, startAoi, submitAoi } = useSurveyor();
+  const { useAssignedAoiDetail, useMyUploads, startAoi, submitAoi } = useSurveyor();
   const { data: aoi, isLoading, isError, error } = useAssignedAoiDetail(id);
-  const { data: poisResponse, isLoading: isLoadingPois } = usePois(id);
   const { data: uploadsResponse, isLoading: isLoadingUploads } = useMyUploads();
-  const [activeTab, setActiveTab] = useState("pois");
-  const [isAddingPoi, setIsAddingPoi] = useState(false);
+  const [activeTab, setActiveTab] = useState("photos");
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
-  const [isConfirmPhotoModalOpen, setIsConfirmPhotoModalOpen] = useState(false);
 
-  const pois = useMemo(() => poisResponse || [], [poisResponse]);
   const aoiPhotos = useMemo(() => {
     if (!uploadsResponse) return [];
     return uploadsResponse.filter((photo: any) => photo.aoi_id === id);
@@ -89,32 +80,6 @@ export default function AOIDetail() {
     );
   };
 
-  const handleCreatePoi = async (name: string) => {
-    if (!location) {
-      toast.error("Location not tracked yet");
-      return;
-    }
-
-    createPoi.mutate(
-      {
-        aoi_id: id,
-        business_name: name,
-        latitude: location.lat,
-        longitude: location.lng,
-      },
-      {
-        onSuccess: () => {
-          toast.success("POI added successfully");
-          setIsAddingPoi(false);
-          setLocation(null);
-        },
-        onError: (err: any) => {
-          toast.error(err?.response?.data?.message || "Failed to add POI");
-        },
-      }
-    );
-  };
-
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "completed": return <CheckCircle className="w-4 h-4 text-green-600" />;
@@ -127,8 +92,6 @@ export default function AOIDetail() {
     startAoi.mutate(id, {
       onSuccess: () => {
         toast.success("AOI started successfully");
-        // Create initial blank POI as requested
-        createPoi.mutate({ aoi_id: id });
       },
       onError: (err: any) => toast.error(err?.response?.data?.message || "Failed to start AOI"),
     });
@@ -148,21 +111,7 @@ export default function AOIDetail() {
     }
   };
 
-  const handleAddPoiClick = () => {
-    const status = aoi.status?.toLowerCase();
-    if (status === "assigned") {
-      toast.error("Please start the AOI first");
-      return;
-    }
-    if (["completed", "submitted", "closed"].includes(status)) {
-      setIsStatusModalOpen(true);
-      return;
-    }
-    setIsAddingPoi(true);
-    startTracking();
-  };
-
-  const handleAddPoiPhotoClick = () => {
+  const handleAddPhoto = () => {
     const status = aoi.status?.toLowerCase();
     if (status === "assigned") {
       toast.error("Please start the AOI first");
@@ -173,18 +122,7 @@ export default function AOIDetail() {
       return;
     }
 
-    setIsConfirmPhotoModalOpen(true);
-  };
-
-  const handleConfirmAddPhoto = async () => {
-    try {
-      const newPoi = await createPoi.mutateAsync({ aoi_id: id });
-      setIsConfirmPhotoModalOpen(false);
-      toast.success("POI created. Opening camera...");
-      router.push(`/surveyor/capture/${newPoi.id}`);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Failed to create POI");
-    }
+    router.push(`/surveyor/capture/${id}`);
   };
 
   return (
@@ -240,33 +178,28 @@ export default function AOIDetail() {
             {/* Progress Card */}
             <Card>
               <CardHeader>
-                <CardTitle>Pixpe Progress</CardTitle>
+                <CardTitle>Survey Progress</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-600">Overall Progress</span>
+                    <span className="text-gray-600">Photos Captured</span>
                     <span className="font-medium">
-                      {aoi.estimated_poi_count > 0 ? Math.round((aoi.actual_poi_count / aoi.estimated_poi_count) * 100) : 0}%
+                      {aoiPhotos.length}
                     </span>
                   </div>
-                  <Progress value={aoi.estimated_poi_count > 0 ? (aoi.actual_poi_count / aoi.estimated_poi_count) * 100 : 0} className="h-2" />
+                  <Progress value={Math.min((aoiPhotos.length / 10) * 100, 100)} className="h-2" />
+                  <p className="text-[10px] text-gray-500 mt-1">* Minimum 10 photos recommended per AOI</p>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 pt-2">
+                <div className="grid grid-cols-2 gap-4 pt-2">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{aoi.actual_poi_count || 0}</div>
-                    <div className="text-xs text-gray-600">Completed</div>
+                    <div className="text-2xl font-bold text-green-600">{aoiPhotos.filter((p: any) => p.status === 'APPROVED').length}</div>
+                    <div className="text-xs text-gray-600">Approved</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600">
-                      {(aoi.estimated_poi_count || 0) - (aoi.actual_poi_count || 0)}
-                    </div>
-                    <div className="text-xs text-gray-600">Pending</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{aoi.estimated_poi_count || 0}</div>
-                    <div className="text-xs text-gray-600">Total POIs</div>
+                    <div className="text-2xl font-bold text-blue-600">{aoiPhotos.length}</div>
+                    <div className="text-xs text-gray-600">Total Photos</div>
                   </div>
                 </div>
               </CardContent>
@@ -299,67 +232,24 @@ export default function AOIDetail() {
               </CardContent>
             </Card>
 
-            {/* POI & Photos Tabs */}
             <Card>
               <CardHeader className="pb-0">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="pois">POIs ({pois.length})</TabsTrigger>
+                    <TabsList className="grid w-full grid-cols-1">
                       <TabsTrigger value="photos">Photos ({aoiPhotos.length})</TabsTrigger>
                     </TabsList>
                   </Tabs>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={handleAddPoiClick}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add POI
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={handleAddPoiPhotoClick} disabled={createPoi.isPending}>
+                    <Button variant="default" size="sm" onClick={handleAddPhoto}>
                       <Camera className="w-4 h-4 mr-2" />
                       Add Photo
                     </Button>
                   </div>
                 </div>
-                <AddPoiModal
-                  isOpen={isAddingPoi}
-                  onOpenChange={setIsAddingPoi}
-                  isLocating={isLocating}
-                  location={location}
-                  startTracking={startTracking}
-                  handleCreatePoi={handleCreatePoi}
-                  isPending={createPoi.isPending}
-                />
               </CardHeader>
               <CardContent className="pt-6">
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsContent value="pois" className="mt-0 space-y-3">
-                    {pois.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">No POIs created yet</div>
-                    ) : (
-                      pois.map((poi: any) => (
-                        <Link key={poi.id} href={`/surveyor/capture/${poi.id}`}>
-                          <div className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                            <div className="flex items-start gap-3">
-                              <div className="mt-1">
-                                {getStatusIcon(poi.status)}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold mb-1">{poi.business_name || "Unnamed POI"}</h4>
-                                <p className="text-sm text-gray-600 mb-2">{poi.address || "No address provided"}</p>
-                              </div>
-                              <Badge variant={
-                                poi.status === "completed" ? "default" :
-                                  poi.status === "in_progress" ? "secondary" : "outline"
-                              }>
-                                {poi.status.replace("_", " ")}
-                              </Badge>
-                            </div>
-                          </div>
-                        </Link>
-                      ))
-                    )}
-                  </TabsContent>
-
                   <TabsContent value="photos" className="mt-0 space-y-3">
                     {isLoadingUploads ? (
                       <div className="space-y-3">
@@ -370,43 +260,38 @@ export default function AOIDetail() {
                       <div className="text-center py-8 text-gray-500">No photos uploaded for this AOI</div>
                     ) : (
                       aoiPhotos.map((photo: any) => (
-                        <Link key={photo.id} href={`/surveyor/capture/${photo.poi_id}`}>
-                          <div className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
-                            <div className="flex gap-4">
-                              <div className="w-20 h-20 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
-                                <ImageWithSkeleton
-                                  src={photo.photo_url}
-                                  alt={photo.photo_type}
-                                  className="w-full h-full object-cover"
-                                />
+                        <div key={photo.id} className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                          <div className="flex gap-4">
+                            <div className="w-20 h-20 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
+                              <ImageWithSkeleton
+                                src={photo.photo_url}
+                                alt={photo.photo_type}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between mb-1">
+                                <Badge variant="outline" className="text-[10px] uppercase font-bold text-gray-600">
+                                  {photo.photo_type.replace("_", " ")}
+                                </Badge>
+                                <span className="text-[10px] text-gray-500">
+                                  {new Date(photo.created_at).toLocaleDateString()}
+                                </span>
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between mb-1">
-                                  <Badge variant="outline" className="text-[10px] uppercase font-bold text-gray-600">
-                                    {photo.photo_type.replace("_", " ")}
-                                  </Badge>
-                                  <span className="text-[10px] text-gray-500">
-                                    {new Date(photo.created_at).toLocaleDateString()}
-                                  </span>
-                                </div>
-                                <p className="text-xs text-gray-600 truncate mb-2">
-                                  POI: {pois.find((p: any) => p.id === photo.poi_id)?.business_name || "Unknown POI"}
-                                </p>
-                                <div className="flex items-center justify-between">
-                                  <Badge variant={
-                                    photo.status === "APPROVED" ? "default" :
-                                      photo.status === "REJECTED" ? "destructive" : "secondary"
-                                  } className="text-[10px]">
-                                    {photo.status}
-                                  </Badge>
-                                  {photo.status === "REJECTED" && (
-                                    <span className="text-[10px] text-red-500 font-medium">Action Required</span>
-                                  )}
-                                </div>
+                              <div className="flex items-center justify-between mt-2">
+                                <Badge variant={
+                                  photo.status === "APPROVED" ? "default" :
+                                    photo.status === "REJECTED" ? "destructive" : "secondary"
+                                } className="text-[10px]">
+                                  {photo.status}
+                                </Badge>
+                                {photo.status === "REJECTED" && (
+                                  <span className="text-[10px] text-red-500 font-medium">Action Required</span>
+                                )}
                               </div>
                             </div>
                           </div>
-                        </Link>
+                        </div>
                       ))
                     )}
                   </TabsContent>
@@ -474,10 +359,12 @@ export default function AOIDetail() {
         </div>
       </div>
 
-      {/* Mobile Floating Action Button */}
       <div className="lg:hidden fixed bottom-20 right-4 z-30 flex flex-col gap-2">
         <Button size="lg" variant="outline" className="rounded-full h-14 w-14 shadow-lg bg-white" onClick={handleNavigate}>
           <Navigation className="w-5 h-5 text-blue-600" />
+        </Button>
+        <Button size="lg" variant="default" className="rounded-full h-14 w-14 shadow-lg" onClick={handleAddPhoto}>
+          <Camera className="w-5 h-5" />
         </Button>
         {aoi.status?.toLowerCase() === "assigned" && (
           <Button size="lg" className="rounded-full h-14 w-14 shadow-lg" onClick={handleStart} disabled={startAoi.isPending}>
@@ -495,13 +382,6 @@ export default function AOIDetail() {
         isOpen={isStatusModalOpen}
         onOpenChange={setIsStatusModalOpen}
         status={aoi.status}
-      />
-
-      <ConfirmAddPhotoModal
-        isOpen={isConfirmPhotoModalOpen}
-        onOpenChange={setIsConfirmPhotoModalOpen}
-        onConfirm={handleConfirmAddPhoto}
-        isPending={createPoi.isPending}
       />
     </div>
   );

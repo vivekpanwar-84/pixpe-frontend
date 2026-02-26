@@ -29,9 +29,9 @@ export default function EditorDashboard() {
   ], []);
 
   const recentSubmissions = useMemo(() => [
-    { id: 1, surveyor: "John Smith", poi: "Starbucks Coffee", photos: 8, submitted: "10 min ago", priority: "high" },
-    { id: 2, surveyor: "Sarah Johnson", poi: "Nike Store", photos: 12, submitted: "25 min ago", priority: "medium" },
-    { id: 3, surveyor: "Mike Wilson", poi: "CVS Pharmacy", photos: 6, submitted: "1 hour ago", priority: "low" },
+    { id: 1, surveyor: "John Smith", aoi: "Sector 45 - Block A", photos: 8, submitted: "10 min ago", priority: "high" },
+    { id: 2, surveyor: "Sarah Johnson", aoi: "Sector 18 - Market", photos: 12, submitted: "25 min ago", priority: "medium" },
+    { id: 3, surveyor: "Mike Wilson", aoi: "Gachibowli - Phase 1", photos: 6, submitted: "1 hour ago", priority: "low" },
   ], []);
 
   const dailyActivity = useMemo(() => [
@@ -153,7 +153,7 @@ export default function EditorDashboard() {
                 <div className="border rounded-lg p-3 hover:bg-gray-50">
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <h4 className="font-semibold text-sm">{submission.poi}</h4>
+                      <h4 className="font-semibold text-sm">{submission.aoi}</h4>
                       <p className="text-xs text-gray-600">By {submission.surveyor}</p>
                     </div>
                     <Badge variant={
@@ -177,7 +177,7 @@ export default function EditorDashboard() {
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium text-sm text-gray-600">POI</th>
+                  <th className="text-left py-3 px-4 font-medium text-sm text-gray-600">AOI</th>
                   <th className="text-left py-3 px-4 font-medium text-sm text-gray-600">Surveyor</th>
                   <th className="text-center py-3 px-4 font-medium text-sm text-gray-600">Photos</th>
                   <th className="text-center py-3 px-4 font-medium text-sm text-gray-600">Priority</th>
@@ -188,7 +188,7 @@ export default function EditorDashboard() {
               <tbody>
                 {recentSubmissions.map((submission) => (
                   <tr key={submission.id} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium">{submission.poi}</td>
+                    <td className="py-3 px-4 font-medium">{submission.aoi}</td>
                     <td className="py-3 px-4 text-sm">{submission.surveyor}</td>
                     <td className="py-3 px-4 text-sm text-center">{submission.photos}</td>
                     <td className="py-3 px-4 text-center">

@@ -18,7 +18,6 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
     { path: "/manager", icon: LayoutDashboard, label: "Dashboard" },
     { path: "/manager/aoi", icon: MapPin, label: "AOI Management" },
     { path: "/manager/poi", icon: ClipboardList, label: "POI Management" },
-    { path: "/manager/approval", icon: CheckSquare, label: "POI Approval" },
     { path: "/manager/kyc-requests", icon: FileText, label: "KYC Requests" },
     { path: "/manager/forms", icon: FileText, label: "Forms Management" },
     { path: "/manager/analytics", icon: BarChart3, label: "Analytics" },

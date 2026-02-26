@@ -12,8 +12,8 @@ export const useManager = () => {
     };
 
     const assignAoiMutation = useMutation({
-        mutationFn: ({ id, surveyorId }: { id: string; surveyorId: string }) =>
-            managerService.assignAoi(id, surveyorId),
+        mutationFn: ({ id, data }: { id: string; data: { surveyor_id?: string; editor_id?: string } }) =>
+            managerService.assignAoi(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['aois'] });
         },
@@ -41,6 +41,14 @@ export const useManager = () => {
         },
     });
 
+    const bulkAssignAoiMutation = useMutation({
+        mutationFn: (data: { aoi_ids: string[]; surveyor_id?: string; editor_id?: string }) =>
+            managerService.bulkAssignAoi(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['aois'] });
+        },
+    });
+
     const useAllPhotos = (status?: string) => {
         return useQuery({
             queryKey: ['photos', 'all', status],
@@ -56,35 +64,11 @@ export const useManager = () => {
         },
     });
 
-    const useAllPois = (aoiId?: string) => {
-        return useQuery({
-            queryKey: ['pois', 'all', aoiId],
-            queryFn: () => managerService.getAllPois(), // Pass aoiId if service supports it
-        });
-    };
-
-    const assignPoiMutation = useMutation({
-        mutationFn: ({ id, editorId }: { id: string; editorId: string }) =>
-            managerService.assignPoi(id, editorId),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['pois'] });
-        },
-    });
-
     const assignPhotoMutation = useMutation({
         mutationFn: ({ id, editorId }: { id: string; editorId: string }) =>
             managerService.assignPhoto(id, editorId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['photos'] });
-        },
-    });
-
-    const verifyPoiMutation = useMutation({
-        mutationFn: ({ id, data }: { id: string; data: any }) =>
-            managerService.verifyPoi(id, data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['photos'] });
-            queryClient.invalidateQueries({ queryKey: ['pois'] });
         },
     });
 
@@ -98,15 +82,13 @@ export const useManager = () => {
     return {
         useAllAois,
         assignAoi: assignAoiMutation,
+        bulkAssignAoi: bulkAssignAoiMutation,
         createAoi: createAoiMutation,
         updateAoi: updateAoiMutation,
         closeAoi: closeAoiMutation,
         useAllPhotos,
         updatePhotoStatus: updatePhotoStatusMutation,
-        useAllPois,
-        assignPoi: assignPoiMutation,
         assignPhoto: assignPhotoMutation,
-        verifyPoi: verifyPoiMutation,
         useAllForms,
     };
 };

@@ -59,7 +59,6 @@ export default function Earnings() {
         aoi_id: targetAoi.id,
         total_photos_submitted: targetAoi.photos_count,
         total_photos_approved: targetAoi.approved_photos_count,
-        total_pois_created: targetAoi.pois_count,
         request_notes: requestNotes,
       });
       toast.success("Payout request submitted successfully!");

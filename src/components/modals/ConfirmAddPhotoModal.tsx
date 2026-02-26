@@ -30,17 +30,17 @@ export function ConfirmAddPhotoModal({
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Camera className="w-5 h-5 text-blue-600" />
-                        Capture New POI Photo
+                        Capture AOI Photos
                     </DialogTitle>
                     <DialogDescription>
-                        This will create a new Point of Interest session.
+                        This will start a new photo capture session.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-6">
                     <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-100 rounded-lg">
                         <AlertCircle className="w-5 h-5 text-blue-600 shrink-0" />
                         <p className="text-sm text-blue-800">
-                            Confirm to open the camera and start capturing photos for a new POI. You can add business details later.
+                            Confirm to open the camera and start capturing photos for this AOI. You can review and submit details later.
                         </p>
                     </div>
                 </div>

@@ -13,12 +13,12 @@ import { ImageWithSkeleton } from "@/components/ui/ImageWithSkeleton";
 
 export default function PhotoCapture() {
   const params = useParams();
-  const poiId = params?.poiId as string;
+  const id = params?.id as string;
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { usePoiDetail, uploadPhoto, useMyUploads, deletePhoto } = useSurveyor();
-  const { data: poi, isLoading: isLoadingPoi } = usePoiDetail(poiId);
+  const { useAssignedAoiDetail, uploadPhoto, useMyUploads, deletePhoto } = useSurveyor();
+  const { data: aoi, isLoading: isLoadingAoi } = useAssignedAoiDetail(id);
   const { data: myUploads, isLoading: isLoadingUploads } = useMyUploads();
 
   const [selectedType, setSelectedType] = useState("STOREFRONT");
@@ -35,16 +35,16 @@ export default function PhotoCapture() {
     location: { lat: number; lng: number };
   }[]>([]);
 
-  // Filter existing photos for this POI from server
+  // Filter existing photos for this AOI from server
   const activePhotos = useMemo(() => {
     if (!myUploads) return [];
-    return myUploads.filter((photo: any) => photo.poi_id === poiId && photo.status !== 'REJECTED');
-  }, [myUploads, poiId]);
+    return myUploads.filter((photo: any) => photo.aoi_id === id && photo.status !== 'REJECTED');
+  }, [myUploads, id]);
 
   const rejectedPhotos = useMemo(() => {
     if (!myUploads) return [];
-    return myUploads.filter((photo: any) => photo.poi_id === poiId && photo.status === 'REJECTED');
-  }, [myUploads, poiId]);
+    return myUploads.filter((photo: any) => photo.aoi_id === id && photo.status === 'REJECTED');
+  }, [myUploads, id]);
 
   // Live Location Tracking
   useEffect(() => {
@@ -79,7 +79,7 @@ export default function PhotoCapture() {
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !poi) return;
+    if (!file || !aoi) return;
 
     if (!location) {
       toast.error("Waiting for live location...");
@@ -136,8 +136,7 @@ export default function PhotoCapture() {
       for (const photo of localPhotos) {
         const formData = new FormData();
         formData.append("file", photo.file);
-        formData.append("poi_id", poiId);
-        formData.append("aoi_id", poi.aoi_id);
+        formData.append("aoi_id", id);
         formData.append("photo_type", photo.type);
         formData.append("latitude", photo.location.lat.toString());
         formData.append("longitude", photo.location.lng.toString());
@@ -155,7 +154,7 @@ export default function PhotoCapture() {
     }
   };
 
-  if (isLoadingPoi || isLoadingUploads) {
+  if (isLoadingAoi || isLoadingUploads) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -182,12 +181,12 @@ export default function PhotoCapture() {
             onClick={() => router.back()}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to POI
+            Back to AOI
           </Button>
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl lg:text-2xl font-bold">Photo Capture</h1>
-              <p className="text-sm text-gray-500">{poi?.business_name}</p>
+              <p className="text-sm text-gray-500">{aoi?.aoi_name}</p>
             </div>
             <div className="flex gap-2">
               <Badge variant="secondary">
@@ -240,7 +239,7 @@ export default function PhotoCapture() {
                       <Camera className="w-16 h-16 mx-auto mb-3 opacity-50" />
                       <p className="text-sm">Tap to Capture / Upload</p>
                       <p className="text-xs text-gray-400 mt-1">
-                        POI: {poi?.business_name || 'Loading...'}
+                        AOI: {aoi?.aoi_name || 'Loading...'}
                       </p>
                     </div>
                   )}

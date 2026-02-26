@@ -4,13 +4,6 @@ import { editorService } from '@/services/editor.service';
 export const useEditor = () => {
     const queryClient = useQueryClient();
 
-    const useAssignedPois = () => {
-        return useQuery({
-            queryKey: ['pois', 'assigned'],
-            queryFn: editorService.getAssignedPois,
-        });
-    };
-
     const useAssignedPhotos = () => {
         return useQuery({
             queryKey: ['photos', 'assigned'],
@@ -23,6 +16,14 @@ export const useEditor = () => {
             queryKey: ['photos', 'assigned', id],
             queryFn: () => editorService.getAssignedPhotoById(id),
             enabled: !!id,
+        });
+    };
+
+    const useAoiPhotos = (aoiId: string, editorId: string) => {
+        return useQuery({
+            queryKey: ['photos', 'aoi', aoiId, 'editor', editorId],
+            queryFn: () => editorService.getPhotosByAoiAndEditor(aoiId, editorId),
+            enabled: !!aoiId && !!editorId,
         });
     };
 
@@ -41,10 +42,27 @@ export const useEditor = () => {
         },
     });
 
+    const useAssignedAois = () => {
+        return useQuery({
+            queryKey: ['aoi', 'assigned'],
+            queryFn: editorService.getAssignedAois,
+        });
+    };
+
+    const useAoiDetails = (id: string) => {
+        return useQuery({
+            queryKey: ['aoi', 'assigned', id],
+            queryFn: () => editorService.getAoiById(id),
+            enabled: !!id,
+        });
+    };
+
     return {
-        useAssignedPois,
+        useAssignedAois,
+        useAoiDetails,
         useAssignedPhotos,
         useAssignedPhotoDetails,
+        useAoiPhotos,
         submitForm: submitFormMutation,
         requestReupload: requestReuploadMutation,
     };

@@ -60,7 +60,7 @@ export default function AssignedPhotos() {
                                     <div className="flex-1 px-3 flex flex-row items-center justify-between min-w-0">
                                         <div className="min-w-0 flex-1 pr-4">
                                             <h3 className="font-semibold text-sm md:text-base leading-tight truncate">
-                                                {photo.poi?.business_name || "Untitled POI"}
+                                                {photo.aoi?.aoi_name || "Untitled AOI"}
                                             </h3>
                                             <div className="flex items-center gap-2 mt-0.5">
                                                 <Badge className={cn(
@@ -73,7 +73,7 @@ export default function AssignedPhotos() {
                                                 <div className="flex items-center gap-2 text-[10px] text-gray-500">
                                                     <span className="flex items-center gap-1 shrink-0">
                                                         <MapPin className="w-2.5 h-2.5" />
-                                                        {photo.poi?.city || "Unknown"}
+                                                        {photo.aoi?.city || "Unknown"}
                                                     </span>
                                                     <span className="flex items-center gap-1 shrink-0">
                                                         <Clock className="w-2.5 h-2.5" />

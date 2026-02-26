@@ -1,8 +1,13 @@
 import api from './api';
 
 export const editorService = {
-    getAssignedPois: async () => {
-        const response = await api.get('/poi/assigned');
+    getAssignedAois: async () => {
+        const response = await api.get('/aoi/assigned');
+        return response.data;
+    },
+
+    getAoiById: async (id: string) => {
+        const response = await api.get(`/aoi/assigned/${id}`);
         return response.data;
     },
 
@@ -13,6 +18,10 @@ export const editorService = {
 
     getAssignedPhotoById: async (id: string) => {
         const response = await api.get(`/photos/assigned/${id}`);
+        return response.data;
+    },
+    getPhotosByAoiAndEditor: async (aoiId: string, editorId: string) => {
+        const response = await api.get(`/photos/aoi/${aoiId}/editor/${editorId}`);
         return response.data;
     },
 

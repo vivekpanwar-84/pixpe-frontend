@@ -7,8 +7,13 @@ export const managerService = {
         return response.data;
     },
 
-    assignAoi: async (id: string, surveyorId: string) => {
-        const response = await api.patch(`/aoi/${id}/assign`, { surveyor_id: surveyorId });
+    assignAoi: async (id: string, data: { surveyor_id?: string; editor_id?: string }) => {
+        const response = await api.patch(`/aoi/${id}/assign`, data);
+        return response.data;
+    },
+
+    bulkAssignAoi: async (data: { aoi_ids: string[]; surveyor_id?: string; editor_id?: string }) => {
+        const response = await api.patch('/aoi/bulk-assign', data);
         return response.data;
     },
 
@@ -24,22 +29,6 @@ export const managerService = {
 
     closeAoi: async (id: string) => {
         const response = await api.patch(`/aoi/${id}/close`);
-        return response.data;
-    },
-
-    // POI Management
-    getAllPois: async () => {
-        const response = await api.get('/poi');
-        return response.data;
-    },
-
-    verifyPoi: async (id: string, data: any) => {
-        const response = await api.patch(`/poi/${id}/verify`, data);
-        return response.data;
-    },
-
-    assignPoi: async (id: string, editorId: string) => {
-        const response = await api.patch(`/poi/${id}/assign`, { editor_id: editorId });
         return response.data;
     },
 

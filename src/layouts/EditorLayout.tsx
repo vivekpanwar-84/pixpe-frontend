@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Image as ImageIcon, RefreshCw, Bell, Menu, User, LogOut } from "lucide-react";
+import { LayoutDashboard, Image as ImageIcon, RefreshCw, Bell, Menu, User, LogOut, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
@@ -16,6 +16,7 @@ export default function EditorLayout({ children }: { children: React.ReactNode }
 
   const navItems = [
     { path: "/editor", icon: LayoutDashboard, label: "Dashboard" },
+    { path: "/editor/aoi", icon: MapPin, label: "AOI Management" },
     { path: "/editor/assigned-photos", icon: ImageIcon, label: "Assigned Photos" },
     { path: "/editor/review", icon: ImageIcon, label: "Photo Review" },
     { path: "/editor/rework", icon: RefreshCw, label: "Rework Queue" },

@@ -22,7 +22,7 @@ export default function ManagerDashboard() {
   const kpis = [
     { icon: Users, label: "Active Surveyors", value: "24", change: "+3", color: "text-blue-600", bg: "bg-blue-50" },
     { icon: MapPin, label: "Active AOIs", value: "18", change: "+2", color: "text-green-600", bg: "bg-green-50" },
-    { icon: CheckCircle, label: "Completed POIs", value: "1,234", change: "+156", color: "text-purple-600", bg: "bg-purple-50" },
+    { icon: CheckCircle, label: "Photos Captured", value: "1,234", change: "+156", color: "text-purple-600", bg: "bg-purple-50" },
     { icon: TrendingUp, label: "Completion Rate", value: "87%", change: "+5%", color: "text-orange-600", bg: "bg-orange-50" },
   ];
 
@@ -74,7 +74,7 @@ export default function ManagerDashboard() {
       <div className="grid lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Weekly Survey Activity</CardTitle>
+            <CardTitle>Weekly Activity</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-72">

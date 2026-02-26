@@ -238,8 +238,8 @@ export default function FormsManagement() {
                         {/* Meta Info */}
                         <div className="grid grid-cols-2 gap-4 bg-gray-50 rounded-xl p-4 mt-4">
                             <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">POI ID</label>
-                                <p className="text-xs font-mono text-gray-500 truncate">{selectedForm?.poi_id}</p>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">AOI ID</label>
+                                <p className="text-xs font-mono text-gray-500 truncate">{selectedForm?.aoi_id}</p>
                             </div>
                             <div className="space-y-1 text-right">
                                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Submitted By</label>

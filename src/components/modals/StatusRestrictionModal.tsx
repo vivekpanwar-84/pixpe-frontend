@@ -32,7 +32,7 @@ export function StatusRestrictionModal({
                 </DialogHeader>
                 <div className="py-4">
                     <p className="text-sm text-gray-600">
-                        This Area of Interest (AOI) is already <strong>{status?.replace("_", " ")}</strong>. You cannot add new Points of Interest (POIs) to this area.
+                        This Area of Interest (AOI) is already <strong>{status?.replace("_", " ")}</strong>. You cannot add new photos to this area.
                     </p>
                 </div>
                 <DialogFooter>
