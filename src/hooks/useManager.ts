@@ -49,10 +49,10 @@ export const useManager = () => {
         },
     });
 
-    const useAllPhotos = (status?: string) => {
+    const useAllPhotos = (filters?: { status?: string, aoiId?: string }) => {
         return useQuery({
-            queryKey: ['photos', 'all', status],
-            queryFn: () => managerService.getAllPhotos(status),
+            queryKey: ['photos', 'all', filters],
+            queryFn: () => managerService.getAllPhotos(filters?.status, filters?.aoiId),
         });
     };
 
@@ -72,10 +72,10 @@ export const useManager = () => {
         },
     });
 
-    const useAllForms = (status?: string) => {
+    const useAllForms = (filters?: { status?: string, photoId?: string, aoiId?: string }) => {
         return useQuery({
-            queryKey: ['forms', 'all', status],
-            queryFn: () => managerService.getAllForms(status),
+            queryKey: ['forms', 'all', filters],
+            queryFn: () => managerService.getAllForms(filters?.status, filters?.photoId, filters?.aoiId),
         });
     };
 

@@ -15,6 +15,7 @@ import { ImageWithSkeleton } from "@/components/ui/ImageWithSkeleton";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { StatusRestrictionModal } from "@/components/modals/StatusRestrictionModal";
+import { useRef } from "react";
 
 const AOIMap = dynamic(() => import("@/components/AOIMap"), {
   ssr: false,
@@ -27,16 +28,17 @@ export default function AOIDetail() {
   const id = params?.id as string;
   const { useAssignedAoiDetail, useMyUploads, startAoi, submitAoi } = useSurveyor();
   const { data: aoi, isLoading, isError, error } = useAssignedAoiDetail(id);
-  const { data: uploadsResponse, isLoading: isLoadingUploads } = useMyUploads();
+  const { data: uploadsResponse, isLoading: isLoadingUploads } = useMyUploads(id);
   const [activeTab, setActiveTab] = useState("photos");
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [replacingPhotoId, setReplacingPhotoId] = useState<string | null>(null);
+  const [replacingPhotoType, setReplacingPhotoType] = useState<string | null>(null);
+  const { uploadPhoto, deletePhoto, resubmitPhoto } = useSurveyor();
 
-  const aoiPhotos = useMemo(() => {
-    if (!uploadsResponse) return [];
-    return uploadsResponse.filter((photo: any) => photo.aoi_id === id);
-  }, [uploadsResponse, id]);
+  const aoiPhotos = uploadsResponse || [];
 
   if (isLoading) {
     return (
@@ -123,6 +125,50 @@ export default function AOIDetail() {
     }
 
     router.push(`/surveyor/capture/${id}`);
+  };
+
+  const handleReplacePhoto = (photoId: string, photoType: string) => {
+    setReplacingPhotoId(photoId);
+    setReplacingPhotoType(photoType);
+    fileInputRef.current?.click();
+  };
+
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !replacingPhotoId || !replacingPhotoType) return;
+
+    const toastId = toast.loading("Replacing photo...");
+    try {
+      // 1. Get current location for new photo
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true });
+      });
+
+      // 2. Delete old photo
+      await deletePhoto.mutateAsync(replacingPhotoId);
+
+      // 3. Upload new photo
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("aoi_id", id);
+      formData.append("photo_type", replacingPhotoType);
+      formData.append("latitude", position.coords.latitude.toString());
+      formData.append("longitude", position.coords.longitude.toString());
+
+      const newPhoto = await uploadPhoto.mutateAsync(formData);
+
+      // 4. Resubmit the new photo
+      await resubmitPhoto.mutateAsync(newPhoto.id);
+
+      toast.success("Photo replaced and resubmitted successfully!", { id: toastId });
+    } catch (error: any) {
+      console.error("Replacement error:", error);
+      toast.error(error?.response?.data?.message || "Failed to replace photo", { id: toastId });
+    } finally {
+      setReplacingPhotoId(null);
+      setReplacingPhotoType(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   return (
@@ -286,7 +332,20 @@ export default function AOIDetail() {
                                   {photo.status}
                                 </Badge>
                                 {photo.status === "REJECTED" && (
-                                  <span className="text-[10px] text-red-500 font-medium">Action Required</span>
+                                  <div className="flex flex-col items-end gap-1">
+                                    <span className="text-[10px] text-red-500 font-medium">Action Required</span>
+                                    <div className="flex gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 text-[10px] px-2"
+                                        onClick={() => handleReplacePhoto(photo.id, photo.photo_type)}
+                                      >
+                                        <Camera className="w-3 h-3 mr-1" />
+                                        Recapture
+                                      </Button>
+                                    </div>
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -382,6 +441,15 @@ export default function AOIDetail() {
         isOpen={isStatusModalOpen}
         onOpenChange={setIsStatusModalOpen}
         status={aoi.status}
+      />
+
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept="image/*"
+        capture="environment"
+        onChange={onFileChange}
       />
     </div>
   );

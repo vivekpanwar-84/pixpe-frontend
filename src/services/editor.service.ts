@@ -10,6 +10,10 @@ export const editorService = {
         const response = await api.get(`/aoi/assigned/${id}`);
         return response.data;
     },
+    getAoiStats: async (id: string) => {
+        const response = await api.get(`/aoi/${id}/stats`);
+        return response.data;
+    },
 
     getAssignedPhotos: async () => {
         const response = await api.get('/photos/assigned');

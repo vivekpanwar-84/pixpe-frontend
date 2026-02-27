@@ -31,6 +31,8 @@ export const useEditor = () => {
         mutationFn: editorService.submitForm,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['forms'] });
+            queryClient.invalidateQueries({ queryKey: ['photos'] });
+            queryClient.invalidateQueries({ queryKey: ['aoi'] });
         },
     });
 
@@ -57,9 +59,18 @@ export const useEditor = () => {
         });
     };
 
+    const useAoiStats = (id: string) => {
+        return useQuery({
+            queryKey: ['aoi', id, 'stats'],
+            queryFn: () => editorService.getAoiStats(id),
+            enabled: !!id,
+        });
+    };
+
     return {
         useAssignedAois,
         useAoiDetails,
+        useAoiStats,
         useAssignedPhotos,
         useAssignedPhotoDetails,
         useAoiPhotos,

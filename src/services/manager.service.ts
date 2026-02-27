@@ -33,8 +33,8 @@ export const managerService = {
     },
 
     // Photos & Forms Review
-    getAllPhotos: async (status?: string) => {
-        const response = await api.get('/photos', { params: { status } });
+    getAllPhotos: async (status?: string, aoiId?: string) => {
+        const response = await api.get('/photos', { params: { status, aoi_id: aoiId } });
         return response.data;
     },
 
@@ -48,8 +48,8 @@ export const managerService = {
         return response.data;
     },
 
-    getAllForms: async (status?: string) => {
-        const response = await api.get('/forms', { params: { status } });
+    getAllForms: async (status?: string, photoId?: string, aoiId?: string) => {
+        const response = await api.get('/forms', { params: { status, photo_id: photoId, aoi_id: aoiId } });
         return response.data;
     },
 

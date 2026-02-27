@@ -16,7 +16,10 @@ import {
     LayoutGrid,
     List as ListIcon,
     Check,
-    XCircle
+    XCircle,
+    FileText,
+    Phone,
+    ArrowRight
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,11 +54,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
-export default function POIManagement() {
+interface POIManagementProps {
+    aoiId?: string;
+}
+
+export default function POIManagement({ aoiId }: POIManagementProps) {
     const { useAllPhotos, assignPhoto, updatePhotoStatus } = useManager();
     const { useAllUsers } = useAdmin();
-    const { data: photos, isLoading: photosLoading } = useAllPhotos();
-    const { data: editors } = useAllUsers("EDITOR");
+    const { data: photos, isLoading: photosLoading } = useAllPhotos({ aoiId });
+    const { data: editors } = useAllUsers("editor");
 
     const [selectedPhoto, setSelectedPhoto] = useState<any>(null);
     const [selectedEditor, setSelectedEditor] = useState<string>("");
@@ -63,7 +70,9 @@ export default function POIManagement() {
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
     const [rejectionReason, setRejectionReason] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+    const [isFormDetailOpen, setIsFormDetailOpen] = useState(false);
+    const [selectedForm, setSelectedForm] = useState<any>(null);
 
     const handleAssign = async () => {
         if (!selectedPhoto || !selectedEditor) return;
@@ -117,10 +126,14 @@ export default function POIManagement() {
         }
     };
 
-    const filteredPhotos = photos?.filter((photo: any) =>
-        photo.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        photo.uploaded_by?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredPhotos = photos?.filter((photo: any) => {
+        const matchesSearch = photo.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            photo.uploaded_by?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+
+        const matchesAoi = !aoiId || photo.aoi_id === aoiId;
+
+        return matchesSearch && matchesAoi;
+    });
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -132,13 +145,31 @@ export default function POIManagement() {
         }
     };
 
+    const handleViewForm = (photo: any) => {
+        if (photo.form) {
+            setSelectedPhoto(photo);
+            setSelectedForm(photo.form);
+            setIsFormDetailOpen(true);
+        } else {
+            toast.error("No form data available for this photo");
+        }
+    };
+
     return (
         <div className="p-4 lg:p-6 space-y-6 max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl lg:text-3xl font-bold mb-1">POI Management</h1>
-                    <p className="text-gray-600">Review and assign points of interest (Photos)</p>
-                </div>
+                {!aoiId ? (
+                    <div>
+                        <h1 className="text-2xl lg:text-3xl font-bold mb-1">POI Management</h1>
+                        <p className="text-gray-600">Review and assign points of interest (Photos)</p>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-bold px-3 py-1">
+                            <Camera className="w-3.5 h-3.5 mr-1.5" /> Photos Gallery
+                        </Badge>
+                    </div>
+                )}
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
                         <Button
@@ -162,7 +193,7 @@ export default function POIManagement() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <Input
                             placeholder="Search photos..."
-                            className="pl-9"
+                            className="pl-9 h-9"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -232,6 +263,7 @@ export default function POIManagement() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuItem
+                                                    className="cursor-pointer"
                                                     onClick={() => {
                                                         setSelectedPhoto(photo);
                                                         setIsAssignModalOpen(true);
@@ -243,7 +275,7 @@ export default function POIManagement() {
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem
-                                                    className="text-green-600 focus:text-green-600 focus:bg-green-50"
+                                                    className="text-green-600 focus:text-green-600 focus:bg-green-50 cursor-pointer"
                                                     onClick={() => handleApprove(photo)}
                                                     disabled={photo.status === "APPROVED"}
                                                 >
@@ -251,7 +283,7 @@ export default function POIManagement() {
                                                     Approve POI
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
-                                                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                                    className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
                                                     onClick={() => {
                                                         setSelectedPhoto(photo);
                                                         setIsRejectModalOpen(true);
@@ -261,6 +293,21 @@ export default function POIManagement() {
                                                     <XCircle className="w-4 h-4 mr-2" />
                                                     Reject POI
                                                 </DropdownMenuItem>
+                                                {photo.form && (
+                                                    <>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            className="text-blue-600 focus:text-blue-600 focus:bg-blue-50 cursor-pointer"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleViewForm(photo);
+                                                            }}
+                                                        >
+                                                            <FileText className="w-4 h-4 mr-2" />
+                                                            View Form Details
+                                                        </DropdownMenuItem>
+                                                    </>
+                                                )}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </div>
@@ -278,27 +325,29 @@ export default function POIManagement() {
                                             <span className="truncate">{photo.latitude}, {photo.longitude}</span>
                                         </div>
                                     </div>
+                                    {photo.form ? (
+                                        <Button
+                                            className="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm h-9"
+                                            onClick={() => handleViewForm(photo)}
+                                        >
+                                            <FileText className="w-4 h-4 mr-2" /> View Form Details
+                                        </Button>
+                                    ) : (
+                                        ["ASSIGNED", "IN_REVIEW", "FORM_SUBMITTED", "APPROVED", "REJECTED"].includes(photo.status) && (
+                                            <div className="mt-2 py-2 px-3 bg-orange-50 rounded-lg border border-orange-100 text-xs text-orange-700 font-medium flex items-center justify-center gap-1.5">
+                                                <AlertCircle className="w-3.5 h-3.5" /> No form filled by editor
+                                            </div>
+                                        )
+                                    )}
                                 </div>
-
-                                {photo.status === "PENDING" && (
-                                    <Button
-                                        className="w-full mt-2"
-                                        variant="outline"
-                                        onClick={() => {
-                                            setSelectedPhoto(photo);
-                                            setIsAssignModalOpen(true);
-                                        }}
-                                    >
-                                        Assign Editor
-                                    </Button>
-                                )}
 
                                 {photo.status === "ASSIGNED" && photo.assigned_to && (
                                     <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-md text-sm text-blue-700 border border-blue-100">
-                                        <CheckCircle2 className="w-4 h-4" />
-                                        <span>Assigned to: <strong>{photo.assigned_to.name}</strong></span>
+                                        <Users className="w-4 h-4" />
+                                        <span className="truncate">Assigned to: <strong>{photo.assigned_to.name}</strong></span>
                                     </div>
                                 )}
+
                             </CardContent>
                         </Card>
                     ))}
@@ -359,8 +408,9 @@ export default function POIManagement() {
                                                     Approve POI
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
-                                                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                                                    onClick={() => {
+                                                    className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
                                                         setSelectedPhoto(photo);
                                                         setIsRejectModalOpen(true);
                                                     }}
@@ -369,6 +419,21 @@ export default function POIManagement() {
                                                     <XCircle className="w-4 h-4 mr-2" />
                                                     Reject POI
                                                 </DropdownMenuItem>
+                                                {photo.form && (
+                                                    <>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            className="text-blue-600 focus:text-blue-600 focus:bg-blue-50 cursor-pointer"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleViewForm(photo);
+                                                            }}
+                                                        >
+                                                            <FileText className="w-4 h-4 mr-2" />
+                                                            View Form Details
+                                                        </DropdownMenuItem>
+                                                    </>
+                                                )}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </div>
@@ -391,39 +456,33 @@ export default function POIManagement() {
                                         <div className="flex items-center gap-2 text-gray-500">
                                             <MapPin className="w-4 h-4 text-green-500" />
                                             <div>
-                                                <p className="text-[10px] uppercase font-bold text-gray-400">Coordinates</p>
                                                 <p className="font-medium text-gray-700 truncate">{photo.latitude}, {photo.longitude}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
+                                            {photo.form ? (
+                                                <Button
+                                                    size="sm"
+                                                    className="bg-blue-600 hover:bg-blue-700 text-white h-8"
+                                                    onClick={() => handleViewForm(photo)}
+                                                >
+                                                    <FileText className="w-3.5 h-3.5 mr-1.5" /> View Form
+                                                </Button>
+                                            ) : (
+                                                ["ASSIGNED", "IN_REVIEW", "FORM_SUBMITTED", "APPROVED", "REJECTED"].includes(photo.status) && (
+                                                    <Badge variant="outline" className="border-orange-200 bg-orange-50 text-orange-700 text-[10px] font-bold">
+                                                        No form fill by editor
+                                                    </Badge>
+                                                )
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2">
                                             <div className="flex items-center gap-2 ml-auto">
-                                                {photo.status === "PENDING" && (
-                                                    <Button
-                                                        className="h-9 px-4"
-                                                        variant="outline"
-                                                        onClick={() => {
-                                                            setSelectedPhoto(photo);
-                                                            setIsAssignModalOpen(true);
-                                                        }}
-                                                    >
-                                                        Assign Editor
-                                                    </Button>
-                                                )}
                                                 {photo.status === "ASSIGNED" && photo.assigned_to && (
-                                                    <div className="flex items-center gap-2 text-blue-700 font-medium">
-                                                        <CheckCircle2 className="w-4 h-4" />
-                                                        <span>{photo.assigned_to.name}</span>
+                                                    <div className="flex items-center gap-2 text-blue-700 font-medium bg-blue-50 px-2 py-1 rounded-md border border-blue-100">
+                                                        <Users className="w-4 h-4" />
+                                                        <span className="text-xs">{photo.assigned_to.name}</span>
                                                     </div>
-                                                )}
-                                                {photo.status !== "APPROVED" && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                                                        onClick={() => handleApprove(photo)}
-                                                    >
-                                                        <Check className="w-4 h-4" />
-                                                    </Button>
                                                 )}
                                             </div>
                                         </div>
@@ -538,6 +597,120 @@ export default function POIManagement() {
                             {updatePhotoStatus.isPending ? "Rejecting..." : "Reject Photo"}
                         </Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            {/* Form Detail Modal */}
+            <Dialog open={isFormDetailOpen} onOpenChange={setIsFormDetailOpen}>
+                <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden border-none shadow-2xl">
+                    {selectedForm ? (
+                        <>
+                            <div className="bg-blue-600 p-6 text-white text-left">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                                        <FileText className="w-5 h-5 text-white" />
+                                    </div>
+                                    <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+                                        {selectedForm.form_type || "BUSINESS_DETAILS"}
+                                    </Badge>
+                                </div>
+                                <DialogTitle className="text-2xl font-bold text-white">
+                                    {selectedForm.form_data?.business_name || "Form Details"}
+                                </DialogTitle>
+                                <DialogDescription className="text-blue-100 italic">
+                                    Submitted {selectedForm.created_at ? format(new Date(selectedForm.created_at), "PPP p") : ""}
+                                </DialogDescription>
+                            </div>
+
+                            <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto bg-white text-left">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-4">
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                                <Users className="w-3 h-3" /> Owner Name
+                                            </label>
+                                            <p className="text-gray-900 font-medium">{selectedForm.form_data?.owner_name || "N/A"}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                                <Phone className="w-3 h-3" /> Contact Phone
+                                            </label>
+                                            <p className="text-gray-900 font-medium">{selectedForm.form_data?.phone || "N/A"}</p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2 text-left">
+                                                <Clock className="w-3 h-3" /> Timings
+                                            </label>
+                                            <p className="text-gray-900 font-medium">{selectedForm.form_data?.timings || "N/A"}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                                <Calendar className="w-3 h-3" /> Days Open
+                                            </label>
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                {selectedForm.form_data?.days_open?.map((day: string) => (
+                                                    <Badge key={day} variant="secondary" className="text-[10px] py-0 px-1.5 bg-gray-100 text-gray-600">
+                                                        {day}
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="pt-4 border-t border-gray-100">
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">Categories</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {selectedForm.form_data?.categories?.map((cat: string) => (
+                                            <Badge key={cat} className="bg-blue-50 text-blue-600 border-blue-100">
+                                                {cat}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {selectedForm.form_data?.details && (
+                                    <div className="pt-4 border-t border-gray-100">
+                                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Additional Details</label>
+                                        <p className="text-sm text-gray-600 leading-relaxed">{selectedForm.form_data.details}</p>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="bg-gray-50 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-100">
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        className="text-red-600 border-red-200 hover:bg-red-50"
+                                        onClick={() => {
+                                            setIsFormDetailOpen(false);
+                                            setIsRejectModalOpen(true);
+                                        }}
+                                        disabled={selectedPhoto?.status === "REJECTED"}
+                                    >
+                                        <XCircle className="w-4 h-4 mr-2" /> Reject POI
+                                    </Button>
+                                    <Button
+                                        className="bg-green-600 hover:bg-green-700 text-white"
+                                        onClick={() => {
+                                            handleApprove(selectedPhoto);
+                                            setIsFormDetailOpen(false);
+                                        }}
+                                        disabled={selectedPhoto?.status === "APPROVED"}
+                                    >
+                                        <Check className="w-4 h-4 mr-2" /> Approve POI
+                                    </Button>
+                                </div>
+                                <Button variant="ghost" onClick={() => setIsFormDetailOpen(false)}>Close</Button>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="p-12 text-center text-gray-500 flex flex-col items-center gap-3">
+                            <FileText className="w-12 h-12 opacity-20" />
+                            <p>No form data found for this photo.</p>
+                            <Button variant="ghost" onClick={() => setIsFormDetailOpen(false)} className="mt-4">Close</Button>
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
         </div>

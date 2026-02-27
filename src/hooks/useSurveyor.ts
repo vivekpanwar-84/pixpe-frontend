@@ -19,10 +19,10 @@ export const useSurveyor = () => {
         });
     };
 
-    const useMyUploads = () => {
+    const useMyUploads = (aoiId?: string) => {
         return useQuery({
-            queryKey: ['photos', 'my-uploads'],
-            queryFn: surveyorService.getMyUploads,
+            queryKey: ['photos', 'my-uploads', aoiId],
+            queryFn: () => surveyorService.getMyUploads(aoiId),
         });
     };
 
@@ -54,6 +54,13 @@ export const useSurveyor = () => {
         }
     });
 
+    const resubmitPhotoMutation = useMutation({
+        mutationFn: surveyorService.resubmitPhoto,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['photos', 'my-uploads'] });
+        }
+    });
+
     return {
         useAssignedAois,
         useAssignedAoiDetail,
@@ -62,5 +69,6 @@ export const useSurveyor = () => {
         submitAoi: submitAoiMutation,
         uploadPhoto: uploadPhotoMutation,
         deletePhoto: deletePhotoMutation,
+        resubmitPhoto: resubmitPhotoMutation,
     };
 };

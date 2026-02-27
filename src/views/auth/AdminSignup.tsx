@@ -26,16 +26,12 @@ export default function Signup() {
         email: "",
         phone: "",
         password: "",
-        role: "",
+        role: "surveyor",
     });
 
     const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!formData.role) {
-            toast.error("Please select a role to continue.");
-            return;
-        }
 
         signup.mutate(
             {
@@ -160,28 +156,6 @@ export default function Signup() {
                                 </div>
                             </div>
 
-                            {/* Role Dropdown */}
-                            <div className="space-y-2">
-                                <Label htmlFor="role">Select Role</Label>
-                                <div className="relative">
-                                    <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none z-10" />
-                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none z-10" />
-                                    <select
-                                        id="role"
-                                        value={formData.role}
-                                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                                        required
-                                        className="w-full h-10 pl-10 pr-10 rounded-md border border-input bg-background text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 appearance-none cursor-pointer text-gray-700"
-                                    >
-                                        <option value="" disabled>Choose your role...</option>
-                                        {ROLES.map((r) => (
-                                            <option key={r.value} value={r.value}>
-                                                {r.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
 
                             {/* Submit */}
                             <Button

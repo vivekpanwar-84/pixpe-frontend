@@ -52,6 +52,19 @@ export default function PhotoReview() {
   const { useAssignedPhotoDetails, requestReupload, submitForm } = useEditor();
   const { data: photo, isLoading, error } = useAssignedPhotoDetails(id);
 
+  // Load existing form data if available
+  useEffect(() => {
+    if (photo?.form?.form_data) {
+      setExtractedData(photo.form.form_data);
+    }
+    if (photo?.rejection_reason) {
+      setFeedback(photo.rejection_reason);
+    }
+    if (photo?.status === "REJECTED") {
+      setDecision("reject");
+    }
+  }, [photo]);
+
   const [decision, setDecision] = useState<string>("");
   const [feedback, setFeedback] = useState("");
   const [isEditing, setIsEditing] = useState(false);
@@ -210,40 +223,51 @@ export default function PhotoReview() {
               </p>
             </div>
 
-            <div className="border-t pt-4">
+            <div className="border-t pt-4 space-y-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold">Survey Data</h3>
                 <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-600 border-blue-200">AI Powered</Badge>
               </div>
 
-              {!extractedData ? (
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-6 text-center space-y-4">
+              <div className={`border rounded-xl p-6 text-center space-y-4 transition-all ${!extractedData
+                ? "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100"
+                : "bg-gray-50 border-gray-100"
+                }`}>
+                {!extractedData && (
                   <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm border border-blue-100">
                     <Sparkles className="w-6 h-6 text-blue-600" />
                   </div>
-                  <div className="space-y-1">
-                    <h4 className="font-semibold text-blue-900">AI Analysis Ready</h4>
+                )}
+                <div className="space-y-1">
+                  <h4 className={`font-semibold ${!extractedData ? "text-blue-900" : "text-gray-900 text-sm"}`}>
+                    {extractedData ? "AI Analysis" : "AI Analysis Ready"}
+                  </h4>
+                  {!extractedData && (
                     <p className="text-xs text-blue-700/70">Analyze this photo automatically to extract business details and check compliance.</p>
-                  </div>
-                  <Button
-                    onClick={handleAiAnalysis}
-                    disabled={isAiLoading}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    {isAiLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Analyzing...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        Run AI Analysis
-                      </>
-                    )}
-                  </Button>
+                  )}
                 </div>
-              ) : (
+                <Button
+                  onClick={handleAiAnalysis}
+                  disabled={isAiLoading}
+                  variant={extractedData ? "outline" : "default"}
+                  className={`w-full transition-all hover:scale-[1.02] active:scale-[0.98] ${!extractedData ? "bg-blue-600 hover:bg-blue-700 text-white shadow-md" : "h-8 text-[10px]"
+                    }`}
+                >
+                  {isAiLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className={`mr-2 ${extractedData ? "w-3 h-3" : "w-4 h-4"}`} />
+                      {extractedData ? "Re-run Analysis" : "Run AI Analysis"}
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {extractedData && (
                 <div className="space-y-4">
                   <div className="grid gap-3 p-4 bg-gray-50 rounded-lg border border-gray-100">
                     <div className="space-y-1">
@@ -365,8 +389,7 @@ export default function PhotoReview() {
                         }, {
                           onSuccess: () => {
                             toast.success("Details saved successfully");
-                            setExtractedData(null);
-                            setAiResponse(null);
+                            // Page stays open to show saved data
                           },
                           onError: (err: any) => {
                             toast.error(err.response?.data?.message || "Failed to save details");
@@ -475,19 +498,29 @@ export default function PhotoReview() {
             </div>
           </CardHeader>
           <CardContent>
-            {!extractedData ? (
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-6 text-center space-y-4">
-                <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm border border-blue-100">
-                  <Sparkles className="w-5 h-5 text-blue-600" />
-                </div>
+            <div className="space-y-4">
+              <div className={`border rounded-xl p-4 text-center space-y-3 transition-all ${!extractedData
+                ? "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100"
+                : "bg-gray-50 border-gray-100"
+                }`}>
+                {!extractedData && (
+                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm border border-blue-100">
+                    <Sparkles className="w-5 h-5 text-blue-600" />
+                  </div>
+                )}
                 <div className="space-y-1">
-                  <h4 className="font-semibold text-blue-900">AI Analysis Ready</h4>
-                  <p className="text-xs text-blue-700/70">Analyze business details automatically.</p>
+                  <h4 className={`font-semibold ${!extractedData ? "text-blue-900" : "text-gray-900 text-sm"}`}>
+                    {extractedData ? "AI Analysis" : "AI Analysis Ready"}
+                  </h4>
+                  {!extractedData && (
+                    <p className="text-xs text-blue-700/70">Analyze business details automatically.</p>
+                  )}
                 </div>
                 <Button
                   onClick={handleAiAnalysis}
                   disabled={isAiLoading}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  variant={extractedData ? "outline" : "default"}
+                  className={`w-full ${!extractedData ? "bg-blue-600 hover:bg-blue-700 text-white" : "h-8 text-[10px]"}`}
                 >
                   {isAiLoading ? (
                     <>
@@ -496,161 +529,162 @@ export default function PhotoReview() {
                     </>
                   ) : (
                     <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Run AI Analysis
+                      <Sparkles className={`mr-2 ${extractedData ? "w-3 h-3" : "w-4 h-4"}`} />
+                      {extractedData ? "Re-run Analysis" : "Run AI Analysis"}
                     </>
                   )}
                 </Button>
               </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="grid gap-3 p-4 bg-gray-50 rounded-lg border border-gray-100">
-                  <div className="space-y-1">
-                    <Label className="text-[10px] uppercase text-gray-400">Business Name</Label>
-                    <Input
-                      value={extractedData.business_name}
-                      onChange={(e) => setExtractedData({ ...extractedData, business_name: e.target.value })}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[10px] uppercase text-gray-400">Owner Name</Label>
-                    <Input
-                      value={extractedData.owner_name}
-                      onChange={(e) => setExtractedData({ ...extractedData, owner_name: e.target.value })}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[10px] uppercase text-gray-400">Phone</Label>
-                    <Input
-                      value={extractedData.phone}
-                      onChange={(e) => setExtractedData({ ...extractedData, phone: e.target.value })}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[10px] uppercase text-gray-400">Address</Label>
-                    <Input
-                      value={extractedData.address}
-                      onChange={(e) => setExtractedData({ ...extractedData, address: e.target.value })}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[10px] uppercase text-gray-400">City</Label>
-                    <Input
-                      value={extractedData.city}
-                      onChange={(e) => setExtractedData({ ...extractedData, city: e.target.value })}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[10px] uppercase text-gray-400">Categories (comma separated)</Label>
-                    <Input
-                      value={extractedData.categories.join(", ")}
-                      onChange={(e) => setExtractedData({ ...extractedData, categories: e.target.value.split(",").map(c => c.trim()).filter(Boolean) })}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
+
+              {extractedData && (
+                <div className="space-y-4">
+                  <div className="grid gap-3 p-4 bg-gray-50 rounded-lg border border-gray-100">
                     <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">Timings</Label>
+                      <Label className="text-[10px] uppercase text-gray-400">Business Name</Label>
                       <Input
-                        value={extractedData.timings}
-                        onChange={(e) => setExtractedData({ ...extractedData, timings: e.target.value })}
-                        className="h-8 text-sm"
-                        placeholder="9 AM - 9 PM"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">GST Number</Label>
-                      <Input
-                        value={extractedData.gst_number}
-                        onChange={(e) => setExtractedData({ ...extractedData, gst_number: e.target.value })}
+                        value={extractedData.business_name}
+                        onChange={(e) => setExtractedData({ ...extractedData, business_name: e.target.value })}
                         className="h-8 text-sm"
                       />
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] uppercase text-gray-400">Days Open</Label>
-                    <div className="flex flex-wrap gap-1">
-                      {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-                        <Badge
-                          key={day}
-                          variant={extractedData.days_open.includes(day) ? "default" : "outline"}
-                          className="text-[10px] px-2 py-0 cursor-pointer h-6"
-                          onClick={() => {
-                            const nextDays = extractedData.days_open.includes(day)
-                              ? extractedData.days_open.filter(d => d !== day)
-                              : [...extractedData.days_open, day];
-                            setExtractedData({ ...extractedData, days_open: nextDays });
-                          }}
-                        >
-                          {day}
-                        </Badge>
-                      ))}
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Owner Name</Label>
+                      <Input
+                        value={extractedData.owner_name}
+                        onChange={(e) => setExtractedData({ ...extractedData, owner_name: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Phone</Label>
+                      <Input
+                        value={extractedData.phone}
+                        onChange={(e) => setExtractedData({ ...extractedData, phone: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Address</Label>
+                      <Input
+                        value={extractedData.address}
+                        onChange={(e) => setExtractedData({ ...extractedData, address: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">City</Label>
+                      <Input
+                        value={extractedData.city}
+                        onChange={(e) => setExtractedData({ ...extractedData, city: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Categories (comma separated)</Label>
+                      <Input
+                        value={extractedData.categories.join(", ")}
+                        onChange={(e) => setExtractedData({ ...extractedData, categories: e.target.value.split(",").map(c => c.trim()).filter(Boolean) })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Timings</Label>
+                        <Input
+                          value={extractedData.timings}
+                          onChange={(e) => setExtractedData({ ...extractedData, timings: e.target.value })}
+                          className="h-8 text-sm"
+                          placeholder="9 AM - 9 PM"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">GST Number</Label>
+                        <Input
+                          value={extractedData.gst_number}
+                          onChange={(e) => setExtractedData({ ...extractedData, gst_number: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase text-gray-400">Days Open</Label>
+                      <div className="flex flex-wrap gap-1">
+                        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                          <Badge
+                            key={day}
+                            variant={extractedData.days_open.includes(day) ? "default" : "outline"}
+                            className="text-[10px] px-2 py-0 cursor-pointer h-6"
+                            onClick={() => {
+                              const nextDays = extractedData.days_open.includes(day)
+                                ? extractedData.days_open.filter(d => d !== day)
+                                : [...extractedData.days_open, day];
+                              setExtractedData({ ...extractedData, days_open: nextDays });
+                            }}
+                          >
+                            {day}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Details</Label>
+                      <Textarea
+                        value={extractedData.details}
+                        onChange={(e) => setExtractedData({ ...extractedData, details: e.target.value })}
+                        className="text-sm min-h-[60px]"
+                      />
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-[10px] uppercase text-gray-400">Details</Label>
-                    <Textarea
-                      value={extractedData.details}
-                      onChange={(e) => setExtractedData({ ...extractedData, details: e.target.value })}
-                      className="text-sm min-h-[60px]"
-                    />
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1 bg-green-600 hover:bg-green-700 h-9"
+                      onClick={() => {
+                        submitForm.mutate({
+                          aoi_id: photo.aoi_id,
+                          form_type: "BUSINESS_DETAILS",
+                          form_data: {
+                            business_name: extractedData.business_name,
+                            owner_name: extractedData.owner_name,
+                            categories: extractedData.categories,
+                            timings: extractedData.timings,
+                            days_open: extractedData.days_open,
+                            phone: extractedData.phone,
+                            gst_number: extractedData.gst_number,
+                            address: extractedData.address,
+                            city: extractedData.city,
+                            details: extractedData.details
+                          },
+                          linked_photo_id: id
+                        }, {
+                          onSuccess: () => {
+                            toast.success("Details saved successfully");
+                            // Page stays open to show saved data
+                          },
+                          onError: (err: any) => {
+                            toast.error(err.response?.data?.message || "Failed to save details");
+                          }
+                        });
+                      }}
+                      disabled={submitForm.isPending}
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      {submitForm.isPending ? "Saving..." : "Save Details"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setExtractedData(null);
+                        setAiResponse(null);
+                      }}
+                      className="px-3 h-9"
+                    >
+                      <RotateCw className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    className="flex-1 bg-green-600 hover:bg-green-700 h-9"
-                    onClick={() => {
-                      submitForm.mutate({
-                        aoi_id: photo.aoi_id,
-                        form_type: "BUSINESS_DETAILS",
-                        form_data: {
-                          business_name: extractedData.business_name,
-                          owner_name: extractedData.owner_name,
-                          categories: extractedData.categories,
-                          timings: extractedData.timings,
-                          days_open: extractedData.days_open,
-                          phone: extractedData.phone,
-                          gst_number: extractedData.gst_number,
-                          address: extractedData.address,
-                          city: extractedData.city,
-                          details: extractedData.details
-                        },
-                        linked_photo_id: id
-                      }, {
-                        onSuccess: () => {
-                          toast.success("Details saved successfully");
-                          setExtractedData(null);
-                          setAiResponse(null);
-                        },
-                        onError: (err: any) => {
-                          toast.error(err.response?.data?.message || "Failed to save details");
-                        }
-                      });
-                    }}
-                    disabled={submitForm.isPending}
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    {submitForm.isPending ? "Saving..." : "Save Details"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setExtractedData(null);
-                      setAiResponse(null);
-                    }}
-                    className="px-3 h-9"
-                  >
-                    <RotateCw className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -660,17 +694,40 @@ export default function PhotoReview() {
             <CardTitle>Review Decision</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <RadioGroup value={decision} onValueChange={setDecision}>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
-                  <RadioGroupItem value="reject" id="reject-mobile" />
-                  <Label htmlFor="reject-mobile" className="flex items-center gap-2 cursor-pointer flex-1">
-                    <XCircle className="w-4 h-4 text-red-600" />
-                    Reject (Request Re-upload)
-                  </Label>
+            <div className="space-y-4">
+              <div className={`p-4 rounded-lg flex items-center gap-3 border ${photo?.status === "APPROVED"
+                ? "bg-emerald-50 border-emerald-100 text-emerald-800"
+                : photo?.status === "REJECTED"
+                  ? "bg-rose-50 border-rose-100 text-rose-800"
+                  : "bg-blue-50 border-blue-100 text-blue-800"
+                }`}>
+                {photo?.status === "APPROVED" ? (
+                  <CheckCircle className="w-5 h-5 text-emerald-600" />
+                ) : photo?.status === "REJECTED" ? (
+                  <XCircle className="w-5 h-5 text-rose-600" />
+                ) : (
+                  <Sparkles className="w-5 h-5 text-blue-600" />
+                )}
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider">Current Status</p>
+                  <p className="text-sm font-black">{photo?.status || "PENDING REVIEW"}</p>
                 </div>
               </div>
-            </RadioGroup>
+
+              {(photo?.status === "PENDING" || photo?.status === "ASSIGNED" || photo?.status === "REJECTED") && (
+                <RadioGroup value={decision} onValueChange={setDecision}>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                      <RadioGroupItem value="reject" id="reject-mobile" />
+                      <Label htmlFor="reject-mobile" className="flex items-center gap-2 cursor-pointer flex-1">
+                        <XCircle className="w-4 h-4 text-red-600" />
+                        Reject (Request Re-upload)
+                      </Label>
+                    </div>
+                  </div>
+                </RadioGroup>
+              )}
+            </div>
 
             <div>
               <Label htmlFor="feedback-mobile">Feedback</Label>

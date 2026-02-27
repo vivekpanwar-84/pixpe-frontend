@@ -32,8 +32,8 @@ export const surveyorService = {
         return response.data;
     },
 
-    getMyUploads: async () => {
-        const response = await api.get('/photos/my-uploads');
+    getMyUploads: async (aoiId?: string) => {
+        const response = await api.get('/photos/my-uploads', { params: { aoi_id: aoiId } });
         return response.data;
     },
 

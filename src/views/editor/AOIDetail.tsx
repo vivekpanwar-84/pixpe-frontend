@@ -224,9 +224,13 @@ export default function AOIDetail() {
                                                     <Button
                                                         className="h-8 px-4 rounded-md font-black bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/10 transition-all active:scale-95 text-[10px] uppercase tracking-wider"
                                                         onClick={() => router.push(`/editor/review/${photo.id}`)}
-                                                        disabled={photo.status === "APPROVED" || photo.status === "REJECTED"}
                                                     >
-                                                        {photo.status === "APPROVED" || photo.status === "REJECTED" ? "Handled" : (
+                                                        {photo.status === "APPROVED" || photo.status === "REJECTED" ? (
+                                                            <>
+                                                                <Info className="w-3 h-3 mr-1.5" />
+                                                                View Details
+                                                            </>
+                                                        ) : (
                                                             <>
                                                                 <Sparkles className="w-3 h-3 mr-1.5" />
                                                                 Review
@@ -283,10 +287,18 @@ export default function AOIDetail() {
                                         <Button
                                             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black h-11 rounded-xl shadow-lg shadow-blue-600/10 transition-all active:scale-95 text-xs uppercase tracking-wider"
                                             onClick={() => router.push(`/editor/review/${photo.id}`)}
-                                            disabled={photo.status === "APPROVED" || photo.status === "REJECTED"}
                                         >
-                                            <Sparkles className="w-4 h-4 mr-2" />
-                                            {photo.status === "APPROVED" || photo.status === "REJECTED" ? "Handled" : "Start Review"}
+                                            {photo.status === "APPROVED" || photo.status === "REJECTED" ? (
+                                                <>
+                                                    <Info className="w-4 h-4 mr-2" />
+                                                    View Details
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Sparkles className="w-4 h-4 mr-2" />
+                                                    Start Review
+                                                </>
+                                            )}
                                         </Button>
                                     </CardContent>
                                 </Card>

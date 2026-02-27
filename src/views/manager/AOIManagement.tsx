@@ -1,10 +1,11 @@
 "use client";
 import { useState } from "react";
-import { Plus, MapPin, Pencil as Edit, Trash2, Users, Check, ChevronsUpDown, UserPlus, MoreHorizontal, X, CheckSquare, Search, SlidersHorizontal } from "lucide-react";
+import { Plus, MapPin, Pencil as Edit, Trash2, Users, Check, ChevronsUpDown, UserPlus, MoreHorizontal, X, CheckSquare, Search, SlidersHorizontal, FileText, Phone, Clock, Calendar, ArrowLeft, Camera } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,12 +19,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/components/ui/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useManager } from "@/hooks/useManager";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
+import { XCircle, CheckCircle2, AlertCircle, Filter } from "lucide-react";
 import tj from "@mapbox/togeojson";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Checkbox } from "@/components/ui/checkbox";
+// import { ActionTooltip } from "@/components/ui/action-tooltip";
+import POIManagement from "./POIManagement";
 
 export default function AOIManagement() {
   const { useAllAois, createAoi, updateAoi, closeAoi, assignAoi, bulkAssignAoi } = useManager();
@@ -52,6 +56,8 @@ export default function AOIManagement() {
   const [openBulkEditor, setOpenBulkEditor] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [selectedAoiForPhotos, setSelectedAoiForPhotos] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'AOI_LIST' | 'PHOTO_LIST'>('AOI_LIST');
 
   const [newAOI, setNewAOI] = useState({
     aoi_name: "",
@@ -270,6 +276,41 @@ export default function AOIManagement() {
       }
     );
   };
+
+  const activeAoiData = aoisList.find((a: any) => a.id === selectedAoiForPhotos);
+
+  if (viewMode === 'PHOTO_LIST' && selectedAoiForPhotos) {
+    return (
+      <div className="p-4 lg:p-6 space-y-6 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                setViewMode('AOI_LIST');
+                setSelectedAoiForPhotos(null);
+              }}
+              className="rounded-full hover:bg-white hover:text-blue-600 border-gray-200 transition-all shadow-sm"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <Camera className="w-6 h-6 text-blue-600" />
+                Photos for {activeAoiData?.aoi_name}
+              </h1>
+              <p className="text-gray-500 text-sm">Managing area photos using integrated POI Management.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden min-h-[400px]">
+          <POIManagement aoiId={selectedAoiForPhotos} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 lg:p-6 space-y-6 max-w-7xl mx-auto">
@@ -684,7 +725,19 @@ export default function AOIManagement() {
               </div>
             )}
             {filteredAoisList.map((aoi: any) => (
-              <Card key={aoi.id} className={selectedAois.includes(aoi.id) ? "ring-2 ring-blue-500" : ""}>
+              <Card
+                key={aoi.id}
+                className={cn(
+                  "transition-all hover:border-blue-300 cursor-pointer shadow-sm hover:shadow-md",
+                  selectedAois.includes(aoi.id) ? "ring-2 ring-blue-500" : ""
+                )}
+                onClick={(e) => {
+                  // Don't trigger if clicking checkbox, buttons or dropdown
+                  if ((e.target as HTMLElement).closest('button, input[type="checkbox"], .dropdown-trigger')) return;
+                  setSelectedAoiForPhotos(aoi.id);
+                  setViewMode('PHOTO_LIST');
+                }}
+              >
                 <CardContent className="p-3 lg:p-4">
                   <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                     {/* Checkbox for assignable AOIs */}
@@ -785,6 +838,8 @@ export default function AOIManagement() {
           </>
         )}
       </div>
+
+
     </div>
   );
 }
