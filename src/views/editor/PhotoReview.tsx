@@ -55,7 +55,9 @@ export default function PhotoReview() {
   // Load existing form data if available
   useEffect(() => {
     if (photo?.form?.form_data) {
+      console.log("[PhotoReview] Loading existing form data:", photo.form.form_data);
       setExtractedData(photo.form.form_data);
+      // If we have saved data, we might want to start in a non-AI-analysis-ready state
     }
     if (photo?.rejection_reason) {
       setFeedback(photo.rejection_reason);
