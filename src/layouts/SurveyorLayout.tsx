@@ -19,6 +19,7 @@ export default function SurveyorLayout({ children }: { children: React.ReactNode
   const navItems = [
     { path: "/surveyor", icon: Home, label: "Home" },
     { path: "/surveyor/aoi", icon: MapPin, label: "AOIs" },
+    { path: "/surveyor/aoi-map", icon: MapPin, label: "AOIs Map" },
     { path: "/surveyor/earnings", icon: DollarSign, label: "Earnings" },
     { path: "/surveyor/profile", icon: User, label: "Profile" },
   ];

@@ -33,20 +33,20 @@ function AOIStats({ aoiId }: { aoiId: string }) {
 
     return (
         <>
-            <div className="flex items-center gap-1.5 px-2 py-0.5 font-bold text-[11px] text-gray-500 bg-transparent h-7">
-                <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
+            <div className="flex items-center gap-1.5 px-2 py-0.5 font-bold text-[13px] text-gray-500 bg-transparent h-7">
+                <ImageIcon className="w-4 h-4 text-blue-500" />
                 <span>{stats.totalPhotos} Total</span>
             </div>
-            <div className="flex items-center gap-1.5 px-2 py-0.5 font-bold text-[11px] text-gray-500 bg-transparent h-7">
-                <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+            <div className="flex items-center gap-1.5 px-2 py-0.5 font-bold text-[13px] text-gray-500 bg-transparent h-7">
+                <CheckCircle className="w-4 h-4 text-emerald-500" />
                 <span>{stats.reviewedPhotos} Reviewed</span>
             </div>
-            <div className="flex items-center gap-1.5 px-2 py-0.5 font-bold text-[11px] text-gray-500 bg-transparent h-7">
-                <XCircle className="w-3.5 h-3.5 text-rose-500" />
+            <div className="flex items-center gap-1.5 px-2 py-0.5 font-bold text-[13px] text-gray-500 bg-transparent h-7">
+                <XCircle className="w-4 h-4 text-rose-500" />
                 <span>{stats.rejectedPhotos} Rejected</span>
             </div>
-            <div className="flex items-center gap-1.5 px-2 py-0.5 font-bold text-[11px] text-gray-500 bg-transparent h-7">
-                <Clock className="w-3.5 h-3.5 text-amber-500" />
+            <div className="flex items-center gap-1.5 px-2 py-0.5 font-bold text-[13px] text-gray-500 bg-transparent h-7">
+                <Clock className="w-4 h-4 text-amber-500" />
                 <span>{stats.pendingPhotos} Pending</span>
             </div>
         </>

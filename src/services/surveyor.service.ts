@@ -7,6 +7,11 @@ export const surveyorService = {
         return response.data;
     },
 
+    getAllAois: async () => {
+        const response = await api.get('/aoi');
+        return response.data;
+    },
+
     getAssignedAoiById: async (id: string) => {
         const response = await api.get(`/aoi/assigned/${id}`);
         return response.data;

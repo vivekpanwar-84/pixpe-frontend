@@ -37,6 +37,7 @@ export default function AOIDetail() {
   const [replacingPhotoId, setReplacingPhotoId] = useState<string | null>(null);
   const [replacingPhotoType, setReplacingPhotoType] = useState<string | null>(null);
   const { uploadPhoto, deletePhoto, resubmitPhoto } = useSurveyor();
+  const [showMap, setShowMap] = useState(false);
 
   const aoiPhotos = uploadsResponse || [];
 
@@ -251,29 +252,50 @@ export default function AOIDetail() {
               </CardContent>
             </Card>
 
-            {/* Map View */}
+            {/* Map View - Deferred to improve LCP */}
             <Card className="overflow-hidden">
+              <CardHeader className="py-3 flex flex-row items-center justify-between">
+                <CardTitle className="text-sm font-medium">Map View</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowMap(!showMap)}
+                  className="text-blue-600 h-8"
+                >
+                  {showMap ? "Hide Map" : "Load Map"}
+                </Button>
+              </CardHeader>
               <CardContent className="p-0">
-                <div className="h-64 lg:h-96 w-full relative z-0">
-                  {aoi.center_latitude && aoi.center_longitude ? (
-                    <AOIMap
-                      center={[Number(aoi.center_latitude), Number(aoi.center_longitude)]}
-                      geojson={aoi.boundary_geojson}
-                      aoiName={aoi.aoi_name}
-                    />
-                  ) : (
-                    <div className="bg-gray-200 h-full flex items-center justify-center">
+                <div className="h-64 lg:h-80 w-full relative z-0 bg-gray-50 flex items-center justify-center">
+                  {showMap ? (
+                    aoi.center_latitude && aoi.center_longitude ? (
+                      <AOIMap
+                        center={[Number(aoi.center_latitude), Number(aoi.center_longitude)]}
+                        geojson={aoi.boundary_geojson}
+                        aoiName={aoi.aoi_name}
+                      />
+                    ) : (
                       <div className="text-center">
                         <MapPin className="w-12 h-12 text-blue-600 mx-auto mb-2" />
                         <p className="text-sm text-gray-600">No coordinates available</p>
                       </div>
+                    )
+                  ) : (
+                    <div className="text-center p-6 cursor-pointer group" onClick={() => setShowMap(true)}>
+                      <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                        <MapPin className="w-8 h-8 text-blue-600" />
+                      </div>
+                      <p className="font-medium text-gray-900">Click to Load AOI Map</p>
+                      <p className="text-xs text-gray-500 mt-1">Improves page load speed</p>
                     </div>
                   )}
-                  <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm p-2 rounded-lg shadow-sm border text-[10px] space-y-1 z-20 pointer-events-none">
-                    <div className="font-semibold text-gray-700">AOI Center</div>
-                    <div className="text-gray-600">Lat: {aoi.center_latitude}</div>
-                    <div className="text-gray-600">Lon: {aoi.center_longitude}</div>
-                  </div>
+                  {showMap && aoi.center_latitude && (
+                    <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm p-2 rounded-lg shadow-sm border text-[10px] space-y-1 z-20 pointer-events-none">
+                      <div className="font-semibold text-gray-700">AOI Center</div>
+                      <div className="text-gray-600">Lat: {aoi.center_latitude}</div>
+                      <div className="text-gray-600">Lon: {aoi.center_longitude}</div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -305,7 +327,7 @@ export default function AOIDetail() {
                     ) : aoiPhotos.length === 0 ? (
                       <div className="text-center py-8 text-gray-500">No photos uploaded for this AOI</div>
                     ) : (
-                      aoiPhotos.map((photo: any) => (
+                      aoiPhotos.map((photo: any, idx: number) => (
                         <div key={photo.id} className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
                           <div className="flex gap-4">
                             <div className="w-20 h-20 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
@@ -313,6 +335,7 @@ export default function AOIDetail() {
                                 src={photo.photo_url}
                                 alt={photo.photo_type}
                                 className="w-full h-full object-cover"
+                                priority={idx === 0}
                               />
                             </div>
                             <div className="flex-1 min-w-0">
