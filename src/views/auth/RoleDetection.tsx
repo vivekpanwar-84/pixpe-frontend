@@ -21,7 +21,7 @@ export default function RoleDetection() {
       });
     }, 200);
 
-    const redirectTimer = setTimeout(() => {
+    const checkAndRedirect = async () => {
       const userStr = localStorage.getItem('user');
       if (!userStr) {
         router.push("/login");
@@ -30,28 +30,36 @@ export default function RoleDetection() {
 
       const user = JSON.parse(userStr);
       const role = typeof user.role === 'string' ? user.role : user.role?.slug;
-
       const rolePath = String(role || "").toLowerCase();
 
-      switch (rolePath) {
-        case 'admin':
-          router.push("/admin");
-          break;
-        case 'manager':
-          router.push("/manager");
-          break;
-        case 'editor':
-          router.push("/editor");
-          break;
-        case 'surveyor':
-          router.push("/surveyor");
-          break;
-        default:
-          toast.error("Role not recognized. Redirecting to login.");
-          router.push("/login");
-          break;
+      try {
+        const { kycService } = await import("@/services/kyc.service");
+        const kycData = await kycService.getKYCStatus();
+
+        if (rolePath === 'surveyor' && kycData?.status !== 'APPROVED') {
+          if (kycData?.status === 'PENDING' || kycData?.status === 'REJECTED') {
+            router.push("/kyc");
+          } else {
+            router.push("/kyc-status");
+          }
+          return;
+        }
+
+        switch (rolePath) {
+          case 'admin': router.push("/admin"); break;
+          case 'manager': router.push("/manager"); break;
+          case 'editor': router.push("/editor"); break;
+          case 'surveyor': router.push("/surveyor"); break;
+          default: router.push("/login"); break;
+        }
+      } catch (error) {
+        console.error("KYC Check Error:", error);
+        if (rolePath) router.push(`/${rolePath}`);
+        else router.push("/login");
       }
-    }, 2500);
+    };
+
+    const redirectTimer = setTimeout(checkAndRedirect, 2000);
 
     return () => {
       clearInterval(timer);

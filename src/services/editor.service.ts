@@ -1,8 +1,8 @@
 import api from './api';
 
 export const editorService = {
-    getAssignedAois: async () => {
-        const response = await api.get('/aoi/assigned');
+    getAssignedAois: async (hasForms?: boolean) => {
+        const response = await api.get('/aoi/assigned', { params: { hasForms } });
         return response.data;
     },
 
@@ -36,6 +36,16 @@ export const editorService = {
 
     requestReupload: async (id: string, reason: string) => {
         const response = await api.patch(`/photos/${id}/request-reupload`, { reason });
+        return response.data;
+    },
+    getForms: async (aoiId?: string, submittedBy?: string, photoId?: string) => {
+        const response = await api.get('/forms', {
+            params: {
+                aoi_id: aoiId,
+                submitted_by: submittedBy,
+                photo_id: photoId
+            }
+        });
         return response.data;
     },
 };

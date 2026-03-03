@@ -273,6 +273,7 @@ export default function AOIDetail() {
                         center={[Number(aoi.center_latitude), Number(aoi.center_longitude)]}
                         geojson={aoi.boundary_geojson}
                         aoiName={aoi.aoi_name}
+                        photos={aoiPhotos}
                       />
                     ) : (
                       <div className="text-center">

@@ -44,10 +44,10 @@ export const useEditor = () => {
         },
     });
 
-    const useAssignedAois = () => {
+    const useAssignedAois = (hasForms?: boolean) => {
         return useQuery({
-            queryKey: ['aoi', 'assigned'],
-            queryFn: editorService.getAssignedAois,
+            queryKey: ['aoi', 'assigned', { hasForms }],
+            queryFn: () => editorService.getAssignedAois(hasForms),
         });
     };
 
@@ -67,6 +67,13 @@ export const useEditor = () => {
         });
     };
 
+    const useForms = (aoiId?: string, submittedBy?: string, photoId?: string) => {
+        return useQuery({
+            queryKey: ['forms', aoiId, submittedBy, photoId],
+            queryFn: () => editorService.getForms(aoiId, submittedBy, photoId),
+        });
+    };
+
     return {
         useAssignedAois,
         useAoiDetails,
@@ -74,6 +81,7 @@ export const useEditor = () => {
         useAssignedPhotos,
         useAssignedPhotoDetails,
         useAoiPhotos,
+        useForms,
         submitForm: submitFormMutation,
         requestReupload: requestReuploadMutation,
     };

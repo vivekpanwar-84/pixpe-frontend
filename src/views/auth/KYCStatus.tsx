@@ -1,28 +1,41 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
-import { CircleCheck as CheckCircle, Clock, CircleX as XCircle, CircleAlert as AlertCircle } from "lucide-react";
+import { CircleCheck as CheckCircle, Clock, CircleX as XCircle, CircleAlert as AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { kycService } from "@/services/kyc.service";
+import { toast } from "sonner";
 
-type KYCStatusType = "approved" | "pending" | "under_review" | "rejected";
+type KYCStatusType = "APPROVED" | "PENDING" | "SUBMITTED" | "REJECTED";
 
 export default function KYCStatus() {
   const router = useRouter();
-  const [status, setStatus] = useState<KYCStatusType>("pending");
+  const [status, setStatus] = useState<KYCStatusType>("PENDING");
+  const [loading, setLoading] = useState(true);
+  const [rejectionReason, setRejectionReason] = useState("");
 
-  useEffect(() => {
-    // Simulate KYC check
-    const timer = setTimeout(() => {
-      setStatus("approved");
-    }, 2000);
-    return () => clearTimeout(timer);
+  const fetchStatus = useCallback(async () => {
+    try {
+      const data = await kycService.getKYCStatus();
+      setStatus(data.status);
+      setRejectionReason(data.rejection_reason || "");
+    } catch (error) {
+      toast.error("Failed to load KYC status");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    fetchStatus();
+  }, [fetchStatus]);
+
   const statusConfig = {
-    approved: {
+    APPROVED: {
       icon: CheckCircle,
       color: "text-green-600",
       bg: "bg-green-100",
@@ -31,7 +44,7 @@ export default function KYCStatus() {
       badge: "Approved",
       badgeVariant: "default" as const,
     },
-    pending: {
+    PENDING: {
       icon: Clock,
       color: "text-yellow-600",
       bg: "bg-yellow-100",
@@ -40,7 +53,7 @@ export default function KYCStatus() {
       badge: "Pending",
       badgeVariant: "secondary" as const,
     },
-    under_review: {
+    SUBMITTED: {
       icon: AlertCircle,
       color: "text-blue-600",
       bg: "bg-blue-100",
@@ -49,7 +62,7 @@ export default function KYCStatus() {
       badge: "Under Review",
       badgeVariant: "secondary" as const,
     },
-    rejected: {
+    REJECTED: {
       icon: XCircle,
       color: "text-red-600",
       bg: "bg-red-100",
@@ -60,12 +73,25 @@ export default function KYCStatus() {
     },
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
   const config = statusConfig[status];
   const Icon = config.icon;
 
   const handleContinue = () => {
-    // Navigate based on role (mocked as surveyor)
-    router.push("/surveyor");
+    router.push("/role-detection");
+  };
+
+  const handleAction = () => {
+    if (status === "PENDING" || status === "REJECTED") {
+      router.push("/kyc");
+    }
   };
 
   return (
@@ -92,53 +118,33 @@ export default function KYCStatus() {
           </CardHeader>
 
           <CardContent className="space-y-4">
-            {status === "approved" && (
-              <>
-                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Role:</span>
-                    <span className="font-medium">Surveyor</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Employee ID:</span>
-                    <span className="font-medium">SRV-2026-001</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Verified On:</span>
-                    <span className="font-medium">Feb 17, 2026</span>
-                  </div>
-                </div>
-
-                <Button onClick={handleContinue} className="w-full" size="lg">
-                  Continue to Dashboard
-                </Button>
-              </>
-            )}
-
-            {status === "pending" && (
-              <Button className="w-full" size="lg">
-                Complete KYC Verification
+            {status === "APPROVED" && (
+              <Button onClick={handleContinue} className="w-full" size="lg">
+                Continue to Dashboard
               </Button>
             )}
 
-            {status === "under_review" && (
-              <div className="text-center text-sm text-gray-600">
-                Expected review time: 24-48 hours
-              </div>
-            )}
-
-            {status === "rejected" && (
+            {(status === "PENDING" || status === "REJECTED") && (
               <>
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm">
-                  <p className="font-medium text-red-900 mb-1">Rejection Reason:</p>
-                  <p className="text-red-700">
-                    Document quality is not clear. Please upload a high-resolution copy of your ID.
-                  </p>
-                </div>
-                <Button className="w-full" size="lg">
-                  Resubmit Documents
+                {status === "REJECTED" && rejectionReason && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm mb-4">
+                    <p className="font-medium text-red-900 mb-1">Rejection Reason:</p>
+                    <p className="text-red-700">{rejectionReason}</p>
+                  </div>
+                )}
+                <Button onClick={handleAction} className="w-full" size="lg">
+                  {status === "REJECTED" ? "Resubmit Documents" : "Complete KYC Verification"}
                 </Button>
               </>
+            )}
+
+            {status === "SUBMITTED" && (
+              <div className="text-center text-sm text-gray-600">
+                Expected review time: 24-48 hours
+                <Button variant="ghost" onClick={fetchStatus} size="sm" className="block mx-auto mt-4">
+                  Refresh Status
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>

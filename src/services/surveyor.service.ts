@@ -67,4 +67,14 @@ export const surveyorService = {
         const response = await api.post('/rewards/request', data);
         return response.data;
     },
+
+    requestAoi: async (data: { aoi_id: string; request_notes?: string }) => {
+        const response = await api.post('/aoi-requests', data);
+        return response.data;
+    },
+
+    getMyAoiRequests: async () => {
+        const response = await api.get('/aoi-requests/my-requests');
+        return response.data;
+    },
 };

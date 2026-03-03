@@ -68,4 +68,15 @@ export const managerService = {
         const response = await api.patch(`/users/${id}/kyc-status`, { status, reason });
         return response.data;
     },
+
+    // AOI Requests
+    getPendingAoiRequests: async () => {
+        const response = await api.get('/aoi-requests/pending');
+        return response.data;
+    },
+
+    respondToAoiRequest: async (id: string, data: { status: 'APPROVED' | 'REJECTED'; manager_notes?: string }) => {
+        const response = await api.patch(`/aoi-requests/${id}/respond`, data);
+        return response.data;
+    },
 };

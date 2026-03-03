@@ -12,12 +12,22 @@ const DefaultIcon = L.icon({
     iconAnchor: [12, 41],
 });
 
+const RedIcon = L.icon({
+    iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
+
 L.Marker.prototype.options.icon = DefaultIcon;
 
 interface AOIMapProps {
     center: [number, number];
     geojson?: any;
     aoiName?: string;
+    photos?: any[];
 }
 
 function ChangeView({ center }: { center: [number, number] }) {
@@ -28,7 +38,7 @@ function ChangeView({ center }: { center: [number, number] }) {
     return null;
 }
 
-export default function AOIMap({ center, geojson, aoiName }: AOIMapProps) {
+export default function AOIMap({ center, geojson, aoiName, photos = [] }: AOIMapProps) {
     return (
         <div className="h-full w-full">
             <MapContainer
@@ -59,6 +69,34 @@ export default function AOIMap({ center, geojson, aoiName }: AOIMapProps) {
                         <div className="font-semibold text-blue-600">{aoiName || "AOI Center"}</div>
                     </Popup>
                 </Marker>
+
+                {photos.filter(p => p.latitude && p.longitude).map((photo) => (
+                    <Marker
+                        key={photo.id}
+                        position={[Number(photo.latitude), Number(photo.longitude)]}
+                        icon={RedIcon}
+                    >
+                        <Popup>
+                            <div className="p-1 space-y-2 min-w-[150px]">
+                                <div className="font-bold text-red-600 uppercase text-[10px] tracking-wider">
+                                    {photo.photo_type.replace("_", " ")}
+                                </div>
+                                {photo.photo_url && (
+                                    <div className="w-full aspect-video rounded overflow-hidden bg-gray-100">
+                                        <img
+                                            src={photo.photo_url}
+                                            alt={photo.photo_type}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                )}
+                                <div className="text-[10px] text-gray-500 italic">
+                                    Captured: {new Date(photo.created_at).toLocaleString()}
+                                </div>
+                            </div>
+                        </Popup>
+                    </Marker>
+                ))}
             </MapContainer>
         </div>
     );

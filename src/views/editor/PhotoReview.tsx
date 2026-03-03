@@ -33,15 +33,23 @@ import { toast } from "sonner";
 
 interface ExtractedData {
   business_name: string;
-  owner_name: string;
+  business_category: string;
+  business_sub_category: string;
   phone: string;
-  address: string;
+  alternate_phone: string;
+  email: string;
+  website: string;
+  contact_person_name: string;
+  contact_person_designation: string;
+  latitude: string;
+  longitude: string;
+  address_line1: string;
+  address_line2: string;
+  landmark: string;
   city: string;
-  categories: string[]; // Array
-  details: string;
-  timings: string;
-  days_open: string[]; // Array
-  gst_number: string;
+  state: string;
+  pin_code: string;
+  country: string;
 }
 
 export default function PhotoReview() {
@@ -49,15 +57,36 @@ export default function PhotoReview() {
   const id = params?.id as string;
   const router = useRouter();
 
-  const { useAssignedPhotoDetails, requestReupload, submitForm } = useEditor();
+  const { useAssignedPhotoDetails, requestReupload, submitForm, useForms } = useEditor();
   const { data: photo, isLoading, error } = useAssignedPhotoDetails(id);
+  const { data: forms } = useForms(undefined, undefined, id);
+  const photoForm = photo?.form || (forms && forms.length > 0 ? forms[0] : null);
 
   // Load existing form data if available
   useEffect(() => {
-    if (photo?.form?.form_data) {
-      console.log("[PhotoReview] Loading existing form data:", photo.form.form_data);
-      setExtractedData(photo.form.form_data);
-      // If we have saved data, we might want to start in a non-AI-analysis-ready state
+    if (photoForm?.form) {
+      console.log("[PhotoReview] Loading existing structured form data:", photoForm.form);
+      const formData = photoForm.form;
+      setExtractedData({
+        business_name: formData.business_name || "Not Provided",
+        business_category: formData.business_category || "Not Provided",
+        business_sub_category: formData.business_sub_category || "Not Provided",
+        phone: formData.phone || "Not Provided",
+        alternate_phone: formData.alternate_phone || "Not Provided",
+        email: formData.email || "Not Provided",
+        website: formData.website || "Not Provided",
+        contact_person_name: formData.contact_person_name || "Not Provided",
+        contact_person_designation: formData.contact_person_designation || "Not Provided",
+        latitude: formData.latitude?.toString() || "Not Provided",
+        longitude: formData.longitude?.toString() || "Not Provided",
+        address_line1: formData.address_line1 || "Not Provided",
+        address_line2: formData.address_line2 || "Not Provided",
+        landmark: formData.landmark || "Not Provided",
+        city: formData.city || "Not Provided",
+        state: formData.state || "Not Provided",
+        pin_code: formData.pin_code || "Not Provided",
+        country: formData.country || "Not Provided",
+      });
     }
     if (photo?.rejection_reason) {
       setFeedback(photo.rejection_reason);
@@ -65,7 +94,7 @@ export default function PhotoReview() {
     if (photo?.status === "REJECTED") {
       setDecision("reject");
     }
-  }, [photo]);
+  }, [photo, photoForm]);
 
   const [decision, setDecision] = useState<string>("");
   const [feedback, setFeedback] = useState("");
@@ -74,26 +103,63 @@ export default function PhotoReview() {
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
 
-  const parseAiResponse = (text: string): ExtractedData => {
+  const parseAiResponse = (text: string, aoi: any): ExtractedData => {
     const getValue = (label: string) => {
-      // Improved regex to handle labels with special characters like (s)
-      const regex = new RegExp(`${label}:?\\s*(.*?)(?=\\n(?:Business Name|Owner Name\\(s\\)|Phone Number\\(s\\)|Address|City|Business Category|Basic Business Details):|$)`, 'is');
-      const match = text.match(regex);
-      return match ? match[1].trim() : "";
+      // Clean labels from potential markdown bolding like **Phone**:
+      const cleanText = text.replace(/\*\*/g, '');
+      const stopLabels = [
+        "Business Name", "Business Category", "Business Sub Category",
+        "Phone", "Alternate Phone", "Email", "Website",
+        "Contact Person Name", "Contact Person Designation",
+        "Latitude", "Longitude", "Address Line 1", "Address Line 2",
+        "Landmark", "City", "State", "Pin Code", "Country",
+        "Basic Business Details", "Owner Name", "Address", "Contact Number"
+      ].join('|');
+
+      const regex = new RegExp(`${label}:?\\s*(.*?)(?=\\n(?:${stopLabels}):|$)`, 'is');
+      const match = cleanText.match(regex);
+      let value = match ? match[1].trim() : "Not Provided";
+
+      // Remove the label itself if AI included it in the value (e.g. Phone: Phone 123)
+      const labelClean = label.replace(/:$/, '');
+      if (value.startsWith(labelClean)) {
+        value = value.replace(new RegExp(`^${labelClean}:?\\s*`, 'i'), '').trim();
+      }
+
+      if (value.toLowerCase() === "not provided" || value === "") return "Not Provided";
+      return value;
     };
 
-    return {
+    const data: ExtractedData = {
       business_name: getValue("Business Name"),
-      owner_name: getValue("Owner Name\\(s\\)"),
-      phone: getValue("Phone Number\\(s\\)"),
-      address: getValue("Address"),
+      business_category: getValue("Business Category"),
+      business_sub_category: getValue("Business Sub Category"),
+      phone: getValue("Phone"),
+      alternate_phone: getValue("Alternate Phone"),
+      email: getValue("Email"),
+      website: getValue("Website"),
+      contact_person_name: getValue("Contact Person Name"),
+      contact_person_designation: getValue("Contact Person Designation"),
+      latitude: getValue("Latitude"),
+      longitude: getValue("Longitude"),
+      address_line1: getValue("Address Line 1"),
+      address_line2: getValue("Address Line 2"),
+      landmark: getValue("Landmark"),
       city: getValue("City"),
-      categories: getValue("Business Category").split(",").map(s => s.trim()).filter(Boolean),
-      details: getValue("Basic Business Details"),
-      timings: "",
-      days_open: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-      gst_number: "",
+      state: getValue("State"),
+      pin_code: getValue("Pin Code"),
+      country: getValue("Country"),
     };
+
+    // Fallback logic for AOI data if AI returns "Not Provided"
+    if (data.city === "Not Provided" && aoi?.city) data.city = aoi.city;
+    if (data.state === "Not Provided" && aoi?.state) data.state = aoi.state;
+    if (data.pin_code === "Not Provided" && aoi?.pin_code) data.pin_code = aoi.pin_code;
+    if (data.latitude === "Not Provided" && aoi?.center_latitude) data.latitude = aoi.center_latitude.toString();
+    if (data.longitude === "Not Provided" && aoi?.center_longitude) data.longitude = aoi.center_longitude.toString();
+    if (data.country === "Not Provided" && aoi?.country) data.country = aoi.country;
+
+    return data;
   };
 
   const handleAiAnalysis = async () => {
@@ -107,9 +173,9 @@ export default function PhotoReview() {
       const response = await api.post("/ai/analyze-image", { image_url: photo.photo_url });
       const rawText = response.data;
       setAiResponse(rawText);
-      setExtractedData(parseAiResponse(rawText));
+      setExtractedData(parseAiResponse(rawText, photo.aoi));
       console.log(rawText);
-      toast.success("AI Analysis Complete");
+      toast.success("AI Analysis Complete (with AOI Fallback)");
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to run AI analysis");
       console.error(err);
@@ -272,100 +338,172 @@ export default function PhotoReview() {
               {extractedData && (
                 <div className="space-y-4">
                   <div className="grid gap-3 p-4 bg-gray-50 rounded-lg border border-gray-100">
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">Business Name</Label>
-                      <Input
-                        value={extractedData.business_name}
-                        onChange={(e) => setExtractedData({ ...extractedData, business_name: e.target.value })}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">Owner Name</Label>
-                      <Input
-                        value={extractedData.owner_name}
-                        onChange={(e) => setExtractedData({ ...extractedData, owner_name: e.target.value })}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">Phone</Label>
-                      <Input
-                        value={extractedData.phone}
-                        onChange={(e) => setExtractedData({ ...extractedData, phone: e.target.value })}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">Address</Label>
-                      <Input
-                        value={extractedData.address}
-                        onChange={(e) => setExtractedData({ ...extractedData, address: e.target.value })}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">City</Label>
-                      <Input
-                        value={extractedData.city}
-                        onChange={(e) => setExtractedData({ ...extractedData, city: e.target.value })}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">Categories (comma separated)</Label>
-                      <Input
-                        value={extractedData.categories.join(", ")}
-                        onChange={(e) => setExtractedData({ ...extractedData, categories: e.target.value.split(",").map(c => c.trim()).filter(Boolean) })}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-[10px] uppercase text-gray-400">Timings</Label>
+                        <Label className="text-[10px] uppercase text-gray-400">Business Name</Label>
                         <Input
-                          value={extractedData.timings}
-                          onChange={(e) => setExtractedData({ ...extractedData, timings: e.target.value })}
+                          value={extractedData.business_name}
+                          onChange={(e) => setExtractedData({ ...extractedData, business_name: e.target.value })}
                           className="h-8 text-sm"
-                          placeholder="9 AM - 9 PM"
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-[10px] uppercase text-gray-400">GST Number</Label>
+                        <Label className="text-[10px] uppercase text-gray-400">Phone</Label>
                         <Input
-                          value={extractedData.gst_number}
-                          onChange={(e) => setExtractedData({ ...extractedData, gst_number: e.target.value })}
+                          value={extractedData.phone}
+                          onChange={(e) => setExtractedData({ ...extractedData, phone: e.target.value })}
                           className="h-8 text-sm"
                         />
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-[10px] uppercase text-gray-400">Days Open</Label>
-                      <div className="flex flex-wrap gap-1">
-                        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-                          <Badge
-                            key={day}
-                            variant={extractedData.days_open.includes(day) ? "default" : "outline"}
-                            className="text-[10px] px-2 py-0 cursor-pointer h-6"
-                            onClick={() => {
-                              const nextDays = extractedData.days_open.includes(day)
-                                ? extractedData.days_open.filter(d => d !== day)
-                                : [...extractedData.days_open, day];
-                              setExtractedData({ ...extractedData, days_open: nextDays });
-                            }}
-                          >
-                            {day}
-                          </Badge>
-                        ))}
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Category</Label>
+                        <Input
+                          value={extractedData.business_category}
+                          onChange={(e) => setExtractedData({ ...extractedData, business_category: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Sub Category</Label>
+                        <Input
+                          value={extractedData.business_sub_category}
+                          onChange={(e) => setExtractedData({ ...extractedData, business_sub_category: e.target.value })}
+                          className="h-8 text-sm"
+                        />
                       </div>
                     </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Alt Phone</Label>
+                        <Input
+                          value={extractedData.alternate_phone}
+                          onChange={(e) => setExtractedData({ ...extractedData, alternate_phone: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Email</Label>
+                        <Input
+                          value={extractedData.email}
+                          onChange={(e) => setExtractedData({ ...extractedData, email: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+
                     <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">Details</Label>
-                      <Textarea
-                        value={extractedData.details}
-                        onChange={(e) => setExtractedData({ ...extractedData, details: e.target.value })}
-                        className="text-sm min-h-[60px]"
+                      <Label className="text-[10px] uppercase text-gray-400">Website</Label>
+                      <Input
+                        value={extractedData.website}
+                        onChange={(e) => setExtractedData({ ...extractedData, website: e.target.value })}
+                        className="h-8 text-sm"
                       />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Contact Person</Label>
+                        <Input
+                          value={extractedData.contact_person_name}
+                          onChange={(e) => setExtractedData({ ...extractedData, contact_person_name: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Designation</Label>
+                        <Input
+                          value={extractedData.contact_person_designation}
+                          onChange={(e) => setExtractedData({ ...extractedData, contact_person_designation: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Latitude</Label>
+                        <Input
+                          value={extractedData.latitude}
+                          onChange={(e) => setExtractedData({ ...extractedData, latitude: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Longitude</Label>
+                        <Input
+                          value={extractedData.longitude}
+                          onChange={(e) => setExtractedData({ ...extractedData, longitude: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Address Line 1</Label>
+                      <Input
+                        value={extractedData.address_line1}
+                        onChange={(e) => setExtractedData({ ...extractedData, address_line1: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Address Line 2</Label>
+                      <Input
+                        value={extractedData.address_line2}
+                        onChange={(e) => setExtractedData({ ...extractedData, address_line2: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Landmark</Label>
+                        <Input
+                          value={extractedData.landmark}
+                          onChange={(e) => setExtractedData({ ...extractedData, landmark: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">City</Label>
+                        <Input
+                          value={extractedData.city}
+                          onChange={(e) => setExtractedData({ ...extractedData, city: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">State</Label>
+                        <Input
+                          value={extractedData.state}
+                          onChange={(e) => setExtractedData({ ...extractedData, state: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Pin Code</Label>
+                        <Input
+                          value={extractedData.pin_code}
+                          onChange={(e) => setExtractedData({ ...extractedData, pin_code: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Country</Label>
+                        <Input
+                          value={extractedData.country}
+                          onChange={(e) => setExtractedData({ ...extractedData, country: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -375,23 +513,29 @@ export default function PhotoReview() {
                         submitForm.mutate({
                           aoi_id: photo.aoi_id,
                           form_type: "BUSINESS_DETAILS",
-                          form_data: {
-                            business_name: extractedData.business_name,
-                            owner_name: extractedData.owner_name,
-                            categories: extractedData.categories,
-                            timings: extractedData.timings,
-                            days_open: extractedData.days_open,
-                            phone: extractedData.phone,
-                            gst_number: extractedData.gst_number,
-                            address: extractedData.address,
-                            city: extractedData.city,
-                            details: extractedData.details
-                          },
+                          business_name: extractedData.business_name || "Not Provided",
+                          business_category: extractedData.business_category,
+                          business_sub_category: extractedData.business_sub_category,
+                          phone: extractedData.phone,
+                          alternate_phone: extractedData.alternate_phone,
+                          email: extractedData.email,
+                          website: extractedData.website,
+                          contact_person_name: extractedData.contact_person_name,
+                          contact_person_designation: extractedData.contact_person_designation,
+                          latitude: parseFloat(extractedData.latitude) || 0,
+                          longitude: parseFloat(extractedData.longitude) || 0,
+                          address_line1: extractedData.address_line1 || "Not Provided",
+                          address_line2: extractedData.address_line2,
+                          landmark: extractedData.landmark,
+                          city: extractedData.city || "Not Provided",
+                          state: extractedData.state || "Not Provided",
+                          pin_code: extractedData.pin_code || "Not Provided",
+                          country: extractedData.country,
                           linked_photo_id: id
                         }, {
                           onSuccess: () => {
                             toast.success("Details saved successfully");
-                            // Page stays open to show saved data
+                            window.location.reload();
                           },
                           onError: (err: any) => {
                             toast.error(err.response?.data?.message || "Failed to save details");
@@ -541,99 +685,168 @@ export default function PhotoReview() {
               {extractedData && (
                 <div className="space-y-4">
                   <div className="grid gap-3 p-4 bg-gray-50 rounded-lg border border-gray-100">
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">Business Name</Label>
-                      <Input
-                        value={extractedData.business_name}
-                        onChange={(e) => setExtractedData({ ...extractedData, business_name: e.target.value })}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">Owner Name</Label>
-                      <Input
-                        value={extractedData.owner_name}
-                        onChange={(e) => setExtractedData({ ...extractedData, owner_name: e.target.value })}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">Phone</Label>
-                      <Input
-                        value={extractedData.phone}
-                        onChange={(e) => setExtractedData({ ...extractedData, phone: e.target.value })}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">Address</Label>
-                      <Input
-                        value={extractedData.address}
-                        onChange={(e) => setExtractedData({ ...extractedData, address: e.target.value })}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">City</Label>
-                      <Input
-                        value={extractedData.city}
-                        onChange={(e) => setExtractedData({ ...extractedData, city: e.target.value })}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">Categories (comma separated)</Label>
-                      <Input
-                        value={extractedData.categories.join(", ")}
-                        onChange={(e) => setExtractedData({ ...extractedData, categories: e.target.value.split(",").map(c => c.trim()).filter(Boolean) })}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-[10px] uppercase text-gray-400">Timings</Label>
+                        <Label className="text-[10px] uppercase text-gray-400">Business Name</Label>
                         <Input
-                          value={extractedData.timings}
-                          onChange={(e) => setExtractedData({ ...extractedData, timings: e.target.value })}
+                          value={extractedData.business_name}
+                          onChange={(e) => setExtractedData({ ...extractedData, business_name: e.target.value })}
                           className="h-8 text-sm"
-                          placeholder="9 AM - 9 PM"
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-[10px] uppercase text-gray-400">GST Number</Label>
+                        <Label className="text-[10px] uppercase text-gray-400">Phone</Label>
                         <Input
-                          value={extractedData.gst_number}
-                          onChange={(e) => setExtractedData({ ...extractedData, gst_number: e.target.value })}
+                          value={extractedData.phone}
+                          onChange={(e) => setExtractedData({ ...extractedData, phone: e.target.value })}
                           className="h-8 text-sm"
                         />
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-[10px] uppercase text-gray-400">Days Open</Label>
-                      <div className="flex flex-wrap gap-1">
-                        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-                          <Badge
-                            key={day}
-                            variant={extractedData.days_open.includes(day) ? "default" : "outline"}
-                            className="text-[10px] px-2 py-0 cursor-pointer h-6"
-                            onClick={() => {
-                              const nextDays = extractedData.days_open.includes(day)
-                                ? extractedData.days_open.filter(d => d !== day)
-                                : [...extractedData.days_open, day];
-                              setExtractedData({ ...extractedData, days_open: nextDays });
-                            }}
-                          >
-                            {day}
-                          </Badge>
-                        ))}
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Category</Label>
+                        <Input
+                          value={extractedData.business_category}
+                          onChange={(e) => setExtractedData({ ...extractedData, business_category: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Sub Category</Label>
+                        <Input
+                          value={extractedData.business_sub_category}
+                          onChange={(e) => setExtractedData({ ...extractedData, business_sub_category: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Alt Phone</Label>
+                      <Input
+                        value={extractedData.alternate_phone}
+                        onChange={(e) => setExtractedData({ ...extractedData, alternate_phone: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Email</Label>
+                      <Input
+                        value={extractedData.email}
+                        onChange={(e) => setExtractedData({ ...extractedData, email: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Website</Label>
+                      <Input
+                        value={extractedData.website}
+                        onChange={(e) => setExtractedData({ ...extractedData, website: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Contact Person</Label>
+                        <Input
+                          value={extractedData.contact_person_name}
+                          onChange={(e) => setExtractedData({ ...extractedData, contact_person_name: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Designation</Label>
+                        <Input
+                          value={extractedData.contact_person_designation}
+                          onChange={(e) => setExtractedData({ ...extractedData, contact_person_designation: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Latitude</Label>
+                        <Input
+                          value={extractedData.latitude}
+                          onChange={(e) => setExtractedData({ ...extractedData, latitude: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Longitude</Label>
+                        <Input
+                          value={extractedData.longitude}
+                          onChange={(e) => setExtractedData({ ...extractedData, longitude: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Address Line 1</Label>
+                      <Input
+                        value={extractedData.address_line1}
+                        onChange={(e) => setExtractedData({ ...extractedData, address_line1: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Address Line 2</Label>
+                      <Input
+                        value={extractedData.address_line2}
+                        onChange={(e) => setExtractedData({ ...extractedData, address_line2: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Landmark</Label>
+                        <Input
+                          value={extractedData.landmark}
+                          onChange={(e) => setExtractedData({ ...extractedData, landmark: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">City</Label>
+                        <Input
+                          value={extractedData.city}
+                          onChange={(e) => setExtractedData({ ...extractedData, city: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">State</Label>
+                        <Input
+                          value={extractedData.state}
+                          onChange={(e) => setExtractedData({ ...extractedData, state: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Pin Code</Label>
+                        <Input
+                          value={extractedData.pin_code}
+                          onChange={(e) => setExtractedData({ ...extractedData, pin_code: e.target.value })}
+                          className="h-8 text-sm"
+                        />
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">Details</Label>
-                      <Textarea
-                        value={extractedData.details}
-                        onChange={(e) => setExtractedData({ ...extractedData, details: e.target.value })}
-                        className="text-sm min-h-[60px]"
+                      <Label className="text-[10px] uppercase text-gray-400">Country</Label>
+                      <Input
+                        value={extractedData.country}
+                        onChange={(e) => setExtractedData({ ...extractedData, country: e.target.value })}
+                        className="h-8 text-sm"
                       />
                     </div>
                   </div>
@@ -644,23 +857,29 @@ export default function PhotoReview() {
                         submitForm.mutate({
                           aoi_id: photo.aoi_id,
                           form_type: "BUSINESS_DETAILS",
-                          form_data: {
-                            business_name: extractedData.business_name,
-                            owner_name: extractedData.owner_name,
-                            categories: extractedData.categories,
-                            timings: extractedData.timings,
-                            days_open: extractedData.days_open,
-                            phone: extractedData.phone,
-                            gst_number: extractedData.gst_number,
-                            address: extractedData.address,
-                            city: extractedData.city,
-                            details: extractedData.details
-                          },
+                          business_name: extractedData.business_name || "Not Provided",
+                          business_category: extractedData.business_category,
+                          business_sub_category: extractedData.business_sub_category,
+                          phone: extractedData.phone,
+                          alternate_phone: extractedData.alternate_phone,
+                          email: extractedData.email,
+                          website: extractedData.website,
+                          contact_person_name: extractedData.contact_person_name,
+                          contact_person_designation: extractedData.contact_person_designation,
+                          latitude: parseFloat(extractedData.latitude) || 0,
+                          longitude: parseFloat(extractedData.longitude) || 0,
+                          address_line1: extractedData.address_line1 || "Not Provided",
+                          address_line2: extractedData.address_line2,
+                          landmark: extractedData.landmark,
+                          city: extractedData.city || "Not Provided",
+                          state: extractedData.state || "Not Provided",
+                          pin_code: extractedData.pin_code || "Not Provided",
+                          country: extractedData.country,
                           linked_photo_id: id
                         }, {
                           onSuccess: () => {
                             toast.success("Details saved successfully");
-                            // Page stays open to show saved data
+                            window.location.reload();
                           },
                           onError: (err: any) => {
                             toast.error(err.response?.data?.message || "Failed to save details");

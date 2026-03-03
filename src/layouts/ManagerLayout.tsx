@@ -17,6 +17,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
   const navItems = [
     { path: "/manager", icon: LayoutDashboard, label: "Dashboard" },
     { path: "/manager/aoi", icon: MapPin, label: "AOI Management" },
+    { path: "/manager/aoi-requests", icon: ClipboardList, label: "AOI Requests" },
     { path: "/manager/kyc-requests", icon: FileText, label: "KYC Requests" },
     { path: "/manager/forms", icon: FileText, label: "Forms Management" },
     { path: "/manager/analytics", icon: BarChart3, label: "Analytics" },

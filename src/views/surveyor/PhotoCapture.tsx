@@ -10,6 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { useSurveyor } from "@/hooks/useSurveyor";
 import { ImageWithSkeleton } from "@/components/ui/ImageWithSkeleton";
+import ReactCrop, { type Crop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
+import getCroppedImg from "@/utils/cropImage";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 export default function PhotoCapture() {
   const params = useParams();
@@ -24,6 +28,13 @@ export default function PhotoCapture() {
   const [selectedType, setSelectedType] = useState("STOREFRONT");
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+
+  // Cropper State
+  const [cropImage, setCropImage] = useState<string | null>(null);
+  const [crop, setCrop] = useState<Crop>();
+  const [pixelCrop, setPixelCrop] = useState<any>(null);
+  const [isCropping, setIsCropping] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   // Local staged photos before upload
   const [localPhotos, setLocalPhotos] = useState<{
@@ -86,18 +97,71 @@ export default function PhotoCapture() {
       return;
     }
 
-    const newPhoto = {
-      id: Math.random().toString(36).substr(2, 9),
-      file,
-      previewUrl: URL.createObjectURL(file),
-      type: selectedType,
-      timestamp: new Date().toLocaleTimeString(),
-      location: { ...location }
-    };
-
-    setLocalPhotos((prev) => [...prev, newPhoto]);
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      setCropImage(reader.result as string);
+      setIsCropping(true);
+    });
+    reader.readAsDataURL(file);
     if (fileInputRef.current) fileInputRef.current.value = "";
-    toast.success(`${selectedType.replace("_", " ")} photo captured locally`);
+  };
+
+  const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { width, height } = e.currentTarget;
+    setCrop({
+      unit: '%',
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+    });
+    setPixelCrop({
+      x: 0,
+      y: 0,
+      width: width,
+      height: height,
+      unit: 'px'
+    });
+  };
+
+  const handleSaveCroppedImage = async () => {
+    if (!cropImage || !pixelCrop || !location || !imgRef.current) return;
+
+    try {
+      // Scale coordinates from displayed size to natural size
+      const image = imgRef.current;
+      const scaleX = image.naturalWidth / image.width;
+      const scaleY = image.naturalHeight / image.height;
+
+      const scaledPixelCrop = {
+        x: pixelCrop.x * scaleX,
+        y: pixelCrop.y * scaleY,
+        width: pixelCrop.width * scaleX,
+        height: pixelCrop.height * scaleY,
+      };
+
+      const croppedBlob = await getCroppedImg(cropImage, scaledPixelCrop);
+      if (!croppedBlob) throw new Error("Failed to crop image");
+
+      const file = new File([croppedBlob], `photo_${Date.now()}.jpg`, { type: "image/jpeg" });
+
+      const newPhoto = {
+        id: Math.random().toString(36).substr(2, 9),
+        file,
+        previewUrl: URL.createObjectURL(file),
+        type: selectedType,
+        timestamp: new Date().toLocaleTimeString(),
+        location: { ...location }
+      };
+
+      setLocalPhotos((prev) => [...prev, newPhoto]);
+      setIsCropping(false);
+      setCropImage(null);
+      toast.success(`${selectedType.replace("_", " ")} photo captured and cropped`);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to crop image");
+    }
   };
 
   const handleRemoveLocal = (id: string) => {
@@ -529,6 +593,48 @@ export default function PhotoCapture() {
           </div>
         </div>
       </div>
+
+      {/* Cropper Dialog */}
+      <Dialog open={isCropping} onOpenChange={(open) => !open && setIsCropping(false)}>
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="p-4 border-b">
+            <DialogTitle>Crop Photo (Drag corners or box)</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 relative bg-gray-100 overflow-auto flex items-center justify-center p-4">
+            {cropImage && (
+              <ReactCrop
+                crop={crop}
+                onChange={(c) => setCrop(c)}
+                onComplete={(c) => setPixelCrop(c)}
+                className="max-h-full"
+              >
+                <img
+                  ref={imgRef}
+                  alt="Crop me"
+                  src={cropImage}
+                  onLoad={onImageLoad}
+                  className="max-w-full max-h-[60vh] object-contain"
+                />
+              </ReactCrop>
+            )}
+          </div>
+          <div className="p-6 space-y-4 bg-white border-t">
+            <p className="text-xs text-gray-500 text-center">
+              Adjust the crop area as needed. You can resize it freely by dragging the edges or corners.
+            </p>
+            <DialogFooter className="flex gap-2 sm:justify-start">
+              <Button onClick={handleSaveCroppedImage} className="flex-1 bg-blue-600 hover:bg-blue-700">
+                <Check className="w-4 h-4 mr-2" />
+                Done & Save
+              </Button>
+              <Button variant="ghost" onClick={() => setIsCropping(false)} className="flex-1">
+                <X className="w-4 h-4 mr-2" />
+                Cancel
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
