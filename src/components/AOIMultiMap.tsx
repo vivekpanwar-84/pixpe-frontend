@@ -47,6 +47,7 @@ interface AOIMultiMapProps {
     aois: AOI[];
     onSelectAoi?: (aoi: AOI) => void;
     focusedAoiId?: string | null;
+    currentUserId?: string;
 }
 
 function MapController({ aois, focusedAoiId }: { aois: AOI[], focusedAoiId?: string | null }) {
@@ -71,7 +72,7 @@ function MapController({ aois, focusedAoiId }: { aois: AOI[], focusedAoiId?: str
     return null;
 }
 
-export default function AOIMultiMap({ aois, onSelectAoi, focusedAoiId }: AOIMultiMapProps) {
+export default function AOIMultiMap({ aois, onSelectAoi, focusedAoiId, currentUserId }: AOIMultiMapProps) {
     const defaultCenter: [number, number] = aois.length > 0
         ? [Number(aois[0].center_latitude), Number(aois[0].center_longitude)]
         : [20.5937, 78.9629]; // Default center of India
@@ -126,16 +127,20 @@ export default function AOIMultiMap({ aois, onSelectAoi, focusedAoiId }: AOIMult
                                                     aoi.status === 'IN_PROGRESS' ? "bg-blue-100 text-blue-700" :
                                                         "bg-gray-100 text-gray-700"
                                                 }`}>
-                                                {!aoi.assigned_to_surveyor_id ? "Available" : aoi.status}
+                                                {!aoi.assigned_to_surveyor_id ? "Available" : aoi.assigned_to_surveyor_id === currentUserId ? "Assigned (You)" : "Assigned"}
                                             </span>
                                         </div>
                                         {aoi.assigned_to_surveyor_id ? (
-                                            <a
-                                                href={`/surveyor/aoi/${aoi.id}`}
-                                                className="text-[10px] text-blue-600 hover:underline font-semibold"
-                                            >
-                                                View Details
-                                            </a>
+                                            aoi.assigned_to_surveyor_id === currentUserId ? (
+                                                <a
+                                                    href={`/surveyor/aoi/${aoi.id}`}
+                                                    className="text-[10px] text-blue-600 hover:underline font-semibold"
+                                                >
+                                                    View Details
+                                                </a>
+                                            ) : (
+                                                <span className="text-[10px] text-gray-400 italic">Already Assigned</span>
+                                            )
                                         ) : (
                                             <button
                                                 onClick={() => onSelectAoi?.(aoi)}

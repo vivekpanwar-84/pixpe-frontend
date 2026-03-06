@@ -14,6 +14,7 @@ import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import getCroppedImg from "@/utils/cropImage";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import imageCompression from 'browser-image-compression';
 
 export default function PhotoCapture() {
   const params = useParams();
@@ -143,12 +144,34 @@ export default function PhotoCapture() {
       const croppedBlob = await getCroppedImg(cropImage, scaledPixelCrop);
       if (!croppedBlob) throw new Error("Failed to crop image");
 
-      const file = new File([croppedBlob], `photo_${Date.now()}.jpg`, { type: "image/jpeg" });
+      // Log original size
+      console.log(`Original cropped size: ${(croppedBlob.size / 1024 / 1024).toFixed(2)} MB`);
+
+      // Compress the cropped image
+      // const options = {
+      //   maxSizeMB: 1,
+      //   maxWidthOrHeight: 1920,
+      //   useWebWorker: true,
+      // };
+      const options = {
+        maxSizeMB: 0.4,           // 400KB
+        maxWidthOrHeight: 1280,   // enough resolution
+        useWebWorker: true,
+        initialQuality: 0.7,
+        fileType: "image/webp",   // BIG improvement
+      };
+
+      const compressedFile = await imageCompression(new File([croppedBlob], "temp.jpg", { type: "image/jpeg" }), options);
+
+      // Log compressed size
+      console.log(`Compressed size: ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
+
+      const finalFile = new File([compressedFile], `photo_${Date.now()}.jpg`, { type: "image/jpeg" });
 
       const newPhoto = {
         id: Math.random().toString(36).substr(2, 9),
-        file,
-        previewUrl: URL.createObjectURL(file),
+        file: finalFile,
+        previewUrl: URL.createObjectURL(finalFile),
         type: selectedType,
         timestamp: new Date().toLocaleTimeString(),
         location: { ...location }
@@ -157,10 +180,10 @@ export default function PhotoCapture() {
       setLocalPhotos((prev) => [...prev, newPhoto]);
       setIsCropping(false);
       setCropImage(null);
-      toast.success(`${selectedType.replace("_", " ")} photo captured and cropped`);
+      toast.success(`${selectedType.replace("_", " ")} photo captured, cropped, and compressed`);
     } catch (e) {
       console.error(e);
-      toast.error("Failed to crop image");
+      toast.error("Failed to process image");
     }
   };
 

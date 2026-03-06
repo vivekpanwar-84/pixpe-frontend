@@ -7,8 +7,8 @@ export const surveyorService = {
         return response.data;
     },
 
-    getAllAois: async () => {
-        const response = await api.get('/aoi');
+    getAllAois: async (unassigned?: boolean) => {
+        const response = await api.get('/aoi', { params: { unassigned } });
         return response.data;
     },
 
@@ -68,7 +68,7 @@ export const surveyorService = {
         return response.data;
     },
 
-    requestAoi: async (data: { aoi_id: string; request_notes?: string }) => {
+    requestAoi: async (data: { aoi_id: string; request_notes?: string; request_type?: 'ASSIGNMENT' | 'REOPEN' }) => {
         const response = await api.post('/aoi-requests', data);
         return response.data;
     },

@@ -1,11 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, User, Building, Landmark, CheckCircle, FileText, Upload } from "lucide-react";
+import { Loader2, User, Building, Landmark, CheckCircle, FileText, Upload, Camera, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,32 +13,145 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { kycService } from "@/services/kyc.service";
 import { toast } from "sonner";
+import imageCompression from 'browser-image-compression';
 
 const kycSchema = z.object({
     full_name: z.string().min(3, "Full name is required"),
-    date_of_birth: z.string().optional(),
-    address: z.string().optional(),
-    city: z.string().optional(),
-    state: z.string().optional(),
-    pin_code: z.string().optional(),
+    date_of_birth: z.string().min(1, "Date of birth is required"),
+    address: z.string().min(5, "Address is required"),
+    city: z.string().min(2, "City is required"),
+    state: z.string().min(2, "State is required"),
+    pin_code: z.string().min(6, "Valid PIN code is required"),
     document_type: z.enum(["AADHAAR", "PAN", "DRIVING_LICENSE", "VOTER_ID"]),
     document_number: z.string().min(5, "Document number is required"),
-    document_front_url: z.string().optional(),
-    document_back_url: z.string().optional(),
-    selfie_url: z.string().optional(),
-    bank_account_number: z.string().optional(),
-    ifsc_code: z.string().optional(),
-    bank_proof_url: z.string().optional(),
+    document_front_url: z.string().min(1, "Front document is required"),
+    document_back_url: z.string().min(1, "Back document is required"),
+    selfie_url: z.string().min(1, "Selfie is required"),
+    bank_account_number: z.string().min(10, "Valid account number is required"),
+    ifsc_code: z.string().min(4, "Valid IFSC code is required"),
+    bank_proof_url: z.string().min(1, "Bank proof is required"),
 });
 
 type KYCFormValues = z.infer<typeof kycSchema>;
+
+// Internal FileUploader Component
+const FileUploader = ({
+    label,
+    value,
+    onChange,
+    type,
+    icon: Icon = Upload,
+    accept = "image/*"
+}: {
+    label: string,
+    value?: string,
+    onChange: (url: string) => void,
+    type: string,
+    icon?: any,
+    accept?: string
+}) => {
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploading(true);
+        const toastId = toast.loading(`Uploading ${label}...`);
+
+        try {
+            let fileToUpload = file;
+            console.log(`[KYCForm] Preparing ${label}:`, file.type, file.size);
+
+            try {
+                const options = {
+                    maxSizeMB: 0.4,
+                    maxWidthOrHeight: 1280,
+                    useWebWorker: true,
+                    initialQuality: 0.7,
+                    fileType: "image/webp" as any,
+                };
+                console.log(`[KYCForm] Compressing...`);
+                const compressedFile = await imageCompression(file, options);
+                fileToUpload = new File([compressedFile], `upload_${Date.now()}.webp`, { type: 'image/webp' });
+                console.log(`[KYCForm] Compression success:`, fileToUpload.size);
+            } catch (compError) {
+                console.error(`[KYCForm] Compression failed, using original:`, compError);
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileToUpload);
+            formData.append('type', type);
+
+            console.log(`[KYCForm] Sending FormData with field "file" (${fileToUpload.name}, ${fileToUpload.type}) and "type" (${type})`);
+
+            const result = await kycService.uploadKycDocument(fileToUpload, type);
+            onChange(result.url);
+            toast.success(`${label} uploaded!`, { id: toastId });
+        } catch (error: any) {
+            console.error(`[KYCForm] Error uploading ${label}:`, error);
+            const responseData = error.response?.data;
+            if (responseData) {
+                console.error(`[KYCForm] Error response from backend:`, responseData);
+            }
+            const errorMessage = responseData?.message || error.message || "Unknown error";
+            toast.error(`Error: ${errorMessage}`, { id: toastId });
+        } finally {
+            setUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
+
+    return (
+        <div className="space-y-2">
+            <Label>{label}</Label>
+            <div
+                className={`relative border-2 border-dashed rounded-lg p-4 transition-colors flex flex-col items-center justify-center gap-2 cursor-pointer
+                    ${value ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/30'}`}
+                onClick={() => !uploading && fileInputRef.current?.click()}
+            >
+                {uploading ? (
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                ) : value ? (
+                    <>
+                        <img src={value} alt={label} className="w-full h-32 object-contain rounded" />
+                        <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">
+                            <CheckCircle className="w-4 h-4" />
+                        </div>
+                        <span className="text-xs text-green-700 font-medium">Re-upload to change</span>
+                    </>
+                ) : (
+                    <>
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                            <Icon className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-600">Select or Capture</span>
+                        <span className="text-[10px] text-gray-400">Max 400KB • WEBP</span>
+                    </>
+                )}
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept={accept}
+                    onChange={handleUpload}
+                    capture={type === 'SELFIE' ? 'user' : undefined}
+                />
+            </div>
+        </div>
+    );
+};
 
 export default function KYCForm() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [step, setStep] = useState(1);
+    const [showSelfieCamera, setShowSelfieCamera] = useState(false);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
 
-    const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<KYCFormValues>({
+    const { register, handleSubmit, setValue, watch, trigger, formState: { errors } } = useForm<KYCFormValues>({
         resolver: zodResolver(kycSchema),
         defaultValues: {
             document_type: "AADHAAR",
@@ -59,8 +172,81 @@ export default function KYCForm() {
         }
     };
 
-    const nextStep = () => setStep(step + 1);
+    const nextStep = async () => {
+        let fieldsToValidate: (keyof KYCFormValues)[] = [];
+        if (step === 1) {
+            fieldsToValidate = ["full_name", "date_of_birth", "address", "city", "state", "pin_code"];
+        } else if (step === 2) {
+            fieldsToValidate = ["document_type", "document_number", "document_front_url", "document_back_url", "selfie_url"];
+        }
+
+        const isValid = await trigger(fieldsToValidate);
+        if (isValid) {
+            setStep(step + 1);
+        } else {
+            toast.error("Please fill all required fields correctly");
+        }
+    };
+
     const prevStep = () => setStep(step - 1);
+
+    const startCamera = async () => {
+        setShowSelfieCamera(true);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+            }
+        } catch (err) {
+            toast.error("Camera access denied");
+            setShowSelfieCamera(false);
+        }
+    };
+
+    const stopCamera = () => {
+        if (videoRef.current?.srcObject) {
+            const stream = videoRef.current.srcObject as MediaStream;
+            stream.getTracks().forEach(track => track.stop());
+        }
+        setShowSelfieCamera(false);
+    };
+
+    const captureSelfie = async () => {
+        if (!videoRef.current || !canvasRef.current) return;
+
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob(async (blob) => {
+            if (!blob) return;
+
+            const toastId = toast.loading("Processing selfie...");
+            try {
+                const file = new File([blob], "selfie.jpg", { type: "image/jpeg" });
+                const options = {
+                    maxSizeMB: 0.4,
+                    maxWidthOrHeight: 1280,
+                    useWebWorker: true,
+                    initialQuality: 0.7,
+                    fileType: "image/webp" as any,
+                };
+                const compressedFile = await imageCompression(file, options);
+                const result = await kycService.uploadKycDocument(compressedFile, 'SELFIE');
+                setValue("selfie_url", result.url);
+                toast.success("Selfie captured!", { id: toastId });
+                stopCamera();
+            } catch (error) {
+                toast.error("Failed to process selfie", { id: toastId });
+            }
+        }, 'image/jpeg', 0.8);
+    };
 
     return (
         <div className="min-h-screen bg-gray-50/50 py-12 px-4">
@@ -84,7 +270,7 @@ export default function KYCForm() {
                 <form onSubmit={handleSubmit(onSubmit)}>
                     {step === 1 && (
                         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-                            <Card>
+                            <Card className="shadow-md">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <User className="w-5 h-5 text-blue-600" />
@@ -101,26 +287,31 @@ export default function KYCForm() {
                                     <div className="space-y-2">
                                         <Label htmlFor="date_of_birth">Date of Birth</Label>
                                         <Input id="date_of_birth" type="date" {...register("date_of_birth")} />
+                                        {errors.date_of_birth && <p className="text-xs text-red-500">{errors.date_of_birth.message}</p>}
                                     </div>
                                     <div className="md:col-span-2 space-y-2">
                                         <Label htmlFor="address">Address</Label>
                                         <Input id="address" {...register("address")} placeholder="123 Street Name" />
+                                        {errors.address && <p className="text-xs text-red-500">{errors.address.message}</p>}
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="city">City</Label>
                                         <Input id="city" {...register("city")} placeholder="New York" />
+                                        {errors.city && <p className="text-xs text-red-500">{errors.city.message}</p>}
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="state">State</Label>
                                         <Input id="state" {...register("state")} placeholder="NY" />
+                                        {errors.state && <p className="text-xs text-red-500">{errors.state.message}</p>}
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="pin_code">PIN / Zip Code</Label>
-                                        <Input id="pin_code" {...register("pin_code")} placeholder="10001" />
+                                        <Input id="pin_code" {...register("pin_code")} placeholder="10001" maxLength={6} />
+                                        {errors.pin_code && <p className="text-xs text-red-500">{errors.pin_code.message}</p>}
                                     </div>
                                 </CardContent>
                                 <CardFooter>
-                                    <Button type="button" onClick={nextStep} className="ml-auto">Next Step</Button>
+                                    <Button type="button" onClick={nextStep} className="ml-auto bg-blue-600 hover:bg-blue-700">Next Step</Button>
                                 </CardFooter>
                             </Card>
                         </motion.div>
@@ -128,7 +319,7 @@ export default function KYCForm() {
 
                     {step === 2 && (
                         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-                            <Card>
+                            <Card className="shadow-md">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <FileText className="w-5 h-5 text-blue-600" />
@@ -163,27 +354,47 @@ export default function KYCForm() {
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <Label>Document Front (URL)</Label>
-                                            <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center">
-                                                <Input {...register("document_front_url")} placeholder="https://image-url.com/front.jpg" />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Document Back (URL)</Label>
-                                            <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center">
-                                                <Input {...register("document_back_url")} placeholder="https://image-url.com/back.jpg" />
-                                            </div>
-                                        </div>
+                                        <FileUploader
+                                            label="Document Front"
+                                            type="DOC_FRONT"
+                                            value={watch("document_front_url")}
+                                            onChange={(url) => setValue("document_front_url", url)}
+                                        />
+                                        <FileUploader
+                                            label="Document Back"
+                                            type="DOC_BACK"
+                                            value={watch("document_back_url")}
+                                            onChange={(url) => setValue("document_back_url", url)}
+                                        />
                                     </div>
-                                    <div className="space-y-2 text-center border-2 border-dashed border-gray-200 rounded-lg p-6">
-                                        <Label className="block mb-2">Selfie Photo (URL)</Label>
-                                        <Input {...register("selfie_url")} placeholder="https://image-url.com/selfie.jpg" />
+
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <Label>Selfie Photo</Label>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 gap-1.5"
+                                                onClick={startCamera}
+                                            >
+                                                <Camera className="w-3.5 h-3.5" />
+                                                Use Camera
+                                            </Button>
+                                        </div>
+                                        <FileUploader
+                                            label="Selfie Photo"
+                                            type="SELFIE"
+                                            value={watch("selfie_url")}
+                                            onChange={(url) => setValue("selfie_url", url)}
+                                            icon={Camera}
+                                        />
+                                        {errors.selfie_url && <p className="text-xs text-red-500 text-center">{errors.selfie_url.message}</p>}
                                     </div>
                                 </CardContent>
                                 <CardFooter className="flex justify-between">
                                     <Button type="button" variant="outline" onClick={prevStep}>Back</Button>
-                                    <Button type="button" onClick={nextStep}>Next Step</Button>
+                                    <Button type="button" onClick={nextStep} className="bg-blue-600 hover:bg-blue-700">Next Step</Button>
                                 </CardFooter>
                             </Card>
                         </motion.div>
@@ -191,7 +402,7 @@ export default function KYCForm() {
 
                     {step === 3 && (
                         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-                            <Card>
+                            <Card className="shadow-md">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <Landmark className="w-5 h-5 text-blue-600" />
@@ -204,18 +415,22 @@ export default function KYCForm() {
                                         <div className="space-y-2">
                                             <Label htmlFor="bank_account_number">Account Number</Label>
                                             <Input id="bank_account_number" {...register("bank_account_number")} placeholder="000000000000" />
+                                            {errors.bank_account_number && <p className="text-xs text-red-500">{errors.bank_account_number.message}</p>}
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="ifsc_code">IFSC Code / Routing Number</Label>
                                             <Input id="ifsc_code" {...register("ifsc_code")} placeholder="ABCD0123456" />
+                                            {errors.ifsc_code && <p className="text-xs text-red-500">{errors.ifsc_code.message}</p>}
                                         </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label>Bank Proof (Cancel Cheque/Passbook URL)</Label>
-                                        <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center">
-                                            <Input {...register("bank_proof_url")} placeholder="https://image-url.com/bank.jpg" />
-                                        </div>
-                                    </div>
+
+                                    <FileUploader
+                                        label="Bank Proof (Cancel Cheque/Passbook)"
+                                        type="BANK_PROOF"
+                                        value={watch("bank_proof_url")}
+                                        onChange={(url) => setValue("bank_proof_url", url)}
+                                    />
+                                    {errors.bank_proof_url && <p className="text-xs text-red-500">{errors.bank_proof_url.message}</p>}
 
                                     <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg flex gap-3">
                                         <CheckCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
@@ -227,14 +442,14 @@ export default function KYCForm() {
                                 </CardContent>
                                 <CardFooter className="flex justify-between">
                                     <Button type="button" variant="outline" onClick={prevStep}>Back</Button>
-                                    <Button type="submit" disabled={loading}>
+                                    <Button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700 min-w-[140px]">
                                         {loading ? (
                                             <>
                                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                                 Submitting...
                                             </>
                                         ) : (
-                                            "Submit KYC Documents"
+                                            "Submit KYC"
                                         )}
                                     </Button>
                                 </CardFooter>
@@ -243,6 +458,50 @@ export default function KYCForm() {
                     )}
                 </form>
             </div>
+
+            {/* Camera Dialog Overlay */}
+            <AnimatePresence>
+                {showSelfieCamera && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+                    >
+                        <div className="relative w-full max-w-lg bg-white rounded-2xl overflow-hidden">
+                            <div className="p-4 border-b flex justify-between items-center bg-white">
+                                <h3 className="font-bold">Capture Selfie</h3>
+                                <Button variant="ghost" size="icon" onClick={stopCamera}>
+                                    <X className="w-5 h-5" />
+                                </Button>
+                            </div>
+                            <div className="relative aspect-square bg-gray-900 overflow-hidden">
+                                <video
+                                    ref={videoRef}
+                                    autoPlay
+                                    playsInline
+                                    className="w-full h-full object-cover scale-x-[-1]"
+                                />
+                                <div className="absolute inset-0 border-[30px] border-black/20 rounded-full scale-90 pointer-events-none"></div>
+                                <canvas ref={canvasRef} className="hidden" />
+                            </div>
+                            <div className="p-6 bg-white border-t flex flex-col gap-4">
+                                <p className="text-xs text-center text-gray-500">
+                                    Align your face within the circle and click capture.
+                                </p>
+                                <Button
+                                    onClick={captureSelfie}
+                                    size="lg"
+                                    className="w-full h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-lg gap-2"
+                                >
+                                    <Camera className="w-5 h-5" />
+                                    Capture Photo
+                                </Button>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

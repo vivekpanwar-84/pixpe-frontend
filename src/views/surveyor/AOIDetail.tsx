@@ -26,7 +26,7 @@ export default function AOIDetail() {
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
-  const { useAssignedAoiDetail, useMyUploads, startAoi, submitAoi } = useSurveyor();
+  const { useAssignedAoiDetail, useMyUploads, startAoi, submitAoi, requestAoi } = useSurveyor();
   const { data: aoi, isLoading, isError, error } = useAssignedAoiDetail(id);
   const { data: uploadsResponse, isLoading: isLoadingUploads } = useMyUploads(id);
   const [activeTab, setActiveTab] = useState("photos");
@@ -104,6 +104,13 @@ export default function AOIDetail() {
     submitAoi.mutate(id, {
       onSuccess: () => toast.success("AOI submitted successfully"),
       onError: (err: any) => toast.error(err?.response?.data?.message || "Failed to submit AOI"),
+    });
+  };
+
+  const handleReopen = () => {
+    requestAoi.mutate({ aoi_id: id, request_type: 'REOPEN' }, {
+      onSuccess: () => toast.success("Reopen request sent to manager"),
+      onError: (err: any) => toast.error(err?.response?.data?.message || "Failed to send reopen request"),
     });
   };
 
@@ -210,6 +217,12 @@ export default function AOIDetail() {
                 <Button className="hidden lg:flex" onClick={handleSubmit} disabled={submitAoi.isPending}>
                   <Send className="w-4 h-4 mr-2" />
                   {submitAoi.isPending ? "Submitting..." : "Submit AOI"}
+                </Button>
+              )}
+              {["submitted", "completed", "closed"].includes(aoi.status?.toLowerCase()) && (
+                <Button className="hidden lg:flex" variant="outline" onClick={handleReopen} disabled={requestAoi.isPending}>
+                  <AlertCircle className="w-4 h-4 mr-2" />
+                  {requestAoi.isPending ? "Sending..." : "Request Reopen"}
                 </Button>
               )}
             </div>
@@ -435,6 +448,12 @@ export default function AOIDetail() {
                       {submitAoi.isPending ? "Submitting..." : "Submit AOI"}
                     </Button>
                   )}
+                  {["submitted", "completed", "closed"].includes(aoi.status?.toLowerCase()) && (
+                    <Button className="w-full" variant="outline" onClick={handleReopen} disabled={requestAoi.isPending}>
+                      <AlertCircle className="w-4 h-4 mr-2" />
+                      {requestAoi.isPending ? "Sending..." : "Request Reopen"}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -457,6 +476,11 @@ export default function AOIDetail() {
         {aoi.status?.toLowerCase() === "in_progress" && (
           <Button size="lg" className="rounded-full h-14 w-14 shadow-lg" onClick={handleSubmit} disabled={submitAoi.isPending}>
             <Send className="w-5 h-5" />
+          </Button>
+        )}
+        {["submitted", "completed", "closed"].includes(aoi.status?.toLowerCase()) && (
+          <Button size="lg" variant="outline" className="rounded-full h-14 w-14 shadow-lg bg-white" onClick={handleReopen} disabled={requestAoi.isPending}>
+            <AlertCircle className="w-5 h-5 text-orange-600" />
           </Button>
         )}
       </div>

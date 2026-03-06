@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AOIMapView() {
     const queryClient = useQueryClient();
@@ -19,10 +20,12 @@ export default function AOIMapView() {
     const [selectedState, setSelectedState] = useState("all");
     const [selectedAoi, setSelectedAoi] = useState<any>(null);
     const [focusedAoiId, setFocusedAoiId] = useState<string | null>(null);
+    const { useProfile } = useAuth();
+    const { data: profile } = useProfile();
 
     const { data: aois, isLoading, error } = useQuery({
         queryKey: ["all-aois"],
-        queryFn: surveyorService.getAllAois,
+        queryFn: () => surveyorService.getAllAois(false),
     });
 
     const { data: myRequests } = useQuery({
@@ -62,9 +65,6 @@ export default function AOIMapView() {
         });
     }, [aois, searchQuery, selectedState]);
 
-    const availableAois = useMemo(() => {
-        return filteredAois.filter((a: any) => !a.assigned_to_surveyor_id);
-    }, [filteredAois]);
 
     const handleRequest = (aoiId: string) => {
         requestMutation.mutate({ aoi_id: aoiId });
@@ -143,7 +143,7 @@ export default function AOIMapView() {
                 {/* Map Area */}
                 <Card className="flex-1 overflow-hidden shadow-md border-none ring-1 ring-gray-200 relative">
                     <CardContent className="p-0 h-full relative">
-                        <AOIMultiMap aois={filteredAois} onSelectAoi={setSelectedAoi} focusedAoiId={focusedAoiId} />
+                        <AOIMultiMap aois={filteredAois} onSelectAoi={setSelectedAoi} focusedAoiId={focusedAoiId} currentUserId={profile?.id} />
 
                         {/* Status Legend Overlay */}
                         <div className="absolute bottom-4 left-4 z-[10] bg-white/90 backdrop-blur-sm p-3 rounded-lg border border-gray-200 shadow-lg text-xs space-y-2">
@@ -173,14 +173,14 @@ export default function AOIMapView() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-0 flex-1 overflow-y-auto">
-                        {availableAois.length === 0 ? (
+                        {filteredAois.length === 0 ? (
                             <div className="p-8 text-center text-gray-500">
                                 <Map className="w-12 h-12 mx-auto mb-3 opacity-20 text-gray-400" />
                                 <p className="text-sm">No available areas match your filters.</p>
                             </div>
                         ) : (
                             <div className="divide-y divide-gray-100">
-                                {availableAois.map((aoi: any) => {
+                                {filteredAois.map((aoi: any) => {
                                     const request = getRequestStatus(aoi.id);
                                     return (
                                         <div key={aoi.id} className="p-4 hover:bg-gray-50 transition-colors group">
@@ -196,7 +196,21 @@ export default function AOIMapView() {
 
                                             <div className="flex items-center justify-between mt-4">
                                                 <div className="flex items-center gap-2">
-                                                    {request ? (
+                                                    {aoi.assigned_to_surveyor_id ? (
+                                                        <div className={`flex items-center gap-1.5 text-xs font-medium ${aoi.assigned_to_surveyor_id === profile?.id ? 'text-blue-600' : 'text-gray-500'}`}>
+                                                            {aoi.assigned_to_surveyor_id === profile?.id ? (
+                                                                <>
+                                                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                                                    Your Assigned Area
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Info className="w-3.5 h-3.5" />
+                                                                    Assigned to Another
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    ) : request ? (
                                                         <div className={`flex items-center gap-1.5 text-xs font-medium ${request.status === 'PENDING' ? 'text-yellow-600' :
                                                             request.status === 'APPROVED' ? 'text-green-600' : 'text-red-600'
                                                             }`}>

@@ -103,6 +103,9 @@ export default function AOIRequests() {
                                                 <div className="flex items-center gap-2">
                                                     <MapPin className="w-5 h-5 text-blue-600" />
                                                     <h3 className="text-lg font-bold">{request.aoi?.aoi_name}</h3>
+                                                    <Badge variant="outline" className={request.request_type === 'REOPEN' ? "bg-orange-50 text-orange-700 border-orange-200" : "bg-blue-50 text-blue-700 border-blue-200"}>
+                                                        {request.request_type || 'ASSIGNMENT'}
+                                                    </Badge>
                                                 </div>
                                                 <div className="flex items-center gap-2 text-sm text-gray-500">
                                                     <Badge variant="secondary" className="font-mono">{request.aoi?.aoi_code}</Badge>

@@ -34,5 +34,13 @@ export const kycService = {
             }
             throw error;
         }
+    },
+
+    uploadKycDocument: async (file: File, type: string) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('type', type);
+        const response = await api.post('/surveyor/kyc/upload', formData);
+        return response.data;
     }
 };

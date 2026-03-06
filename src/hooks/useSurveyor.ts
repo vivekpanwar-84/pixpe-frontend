@@ -61,6 +61,13 @@ export const useSurveyor = () => {
         }
     });
 
+    const requestAoiMutation = useMutation({
+        mutationFn: surveyorService.requestAoi,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['aoi-requests'] });
+        }
+    });
+
     return {
         useAssignedAois,
         useAssignedAoiDetail,
@@ -70,5 +77,6 @@ export const useSurveyor = () => {
         uploadPhoto: uploadPhotoMutation,
         deletePhoto: deletePhotoMutation,
         resubmitPhoto: resubmitPhotoMutation,
+        requestAoi: requestAoiMutation,
     };
 };
