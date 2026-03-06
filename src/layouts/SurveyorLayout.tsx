@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { House as Home, MapPin, Camera, DollarSign, User, Bell, Menu, LogOut } from "lucide-react";
+import { House as Home, MapPin, Camera, DollarSign, User, Menu, LogOut } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -12,10 +12,10 @@ import { RoleGuard } from "@/components/auth/RoleGuard";
 import { useAuthContext } from "@/providers/AuthContext";
 
 import { KYCGuard } from "@/components/auth/KYCGuard";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export default function SurveyorLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [notifications] = useState(3);
   const { user, logout } = useAuthContext();
 
   const navItems = [
@@ -81,14 +81,7 @@ export default function SurveyorLayout({ children }: { children: React.ReactNode
                   </Sheet>
                   <h1 className="font-semibold text-lg">Pixpe</h1>
                 </div>
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="w-5 h-5" />
-                  {notifications > 0 && (
-                    <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
-                      {notifications}
-                    </Badge>
-                  )}
-                </Button>
+                <NotificationBell />
               </div>
             </header>
 
@@ -135,14 +128,7 @@ export default function SurveyorLayout({ children }: { children: React.ReactNode
                   </h2>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Button variant="ghost" size="icon" className="relative">
-                    <Bell className="w-5 h-5" />
-                    {notifications > 0 && (
-                      <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
-                        {notifications}
-                      </Badge>
-                    )}
-                  </Button>
+                  <NotificationBell />
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
                       {userInitials}

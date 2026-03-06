@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Image as ImageIcon, RefreshCw, Bell, Menu, User, LogOut, MapPin, FileText } from "lucide-react";
+import { LayoutDashboard, Image as ImageIcon, RefreshCw, Menu, User, LogOut, MapPin, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { useAuthContext } from "@/providers/AuthContext";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export default function EditorLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -79,10 +80,7 @@ export default function EditorLayout({ children }: { children: React.ReactNode }
                 <h1 className="font-semibold text-lg">Pixpe</h1>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="w-5 h-5" />
-                  <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs">5</Badge>
-                </Button>
+                <NotificationBell />
               </div>
             </div>
           </header>
@@ -128,10 +126,7 @@ export default function EditorLayout({ children }: { children: React.ReactNode }
                 {navItems.find((item) => isActive(item.path))?.label || "Dashboard"}
               </h2>
               <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="w-5 h-5" />
-                  <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs">5</Badge>
-                </Button>
+                <NotificationBell />
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white text-sm font-medium">
                     {userInitials}

@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Settings, Bell, Menu, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Settings, Menu, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { useAuthContext } from "@/providers/AuthContext";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -66,9 +67,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </Sheet>
                 <h1 className="font-semibold text-lg">Pixpe</h1>
               </div>
-              <Button variant="ghost" size="icon">
-                <Bell className="w-5 h-5" />
-              </Button>
+              <NotificationBell />
             </div>
           </header>
 
@@ -101,9 +100,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="flex items-center justify-between px-6 h-16">
               <h2 className="text-lg font-semibold">{navItems.find((item) => isActive(item.path))?.label || "Dashboard"}</h2>
               <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon">
-                  <Bell className="w-5 h-5" />
-                </Button>
+                <NotificationBell />
                 <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white text-sm font-medium">{userInitials}</div>
               </div>
             </div>
