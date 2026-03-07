@@ -27,6 +27,7 @@ import { useEditor } from "@/hooks/useEditor";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "motion/react";
+import { ImageWithLoader } from "@/components/ImageWithLoader";
 
 export default function AOIDetail() {
     const { id } = useParams();
@@ -43,7 +44,8 @@ export default function AOIDetail() {
 
     const filteredPhotos = photos?.filter((photo: any) =>
         photo.photo_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        photo.uploaded_by?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+        photo.uploaded_by?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (photo.uploaded_by?.city?.toLowerCase() || "").includes(searchQuery.toLowerCase())
     ) || [];
 
     const getStatusStyles = (status: string) => {
@@ -123,7 +125,7 @@ export default function AOIDetail() {
                         <div className="relative w-full sm:w-64">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <Input
-                                placeholder="Find asset..."
+                                placeholder="Find asset by type or city..."
                                 className="pl-11 h-12 bg-white border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500 shadow-sm font-bold text-sm"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -176,10 +178,10 @@ export default function AOIDetail() {
                                             className="relative w-full md:w-24 h-24 md:h-16 flex-shrink-0 cursor-pointer overflow-hidden rounded-lg group/img"
                                             onClick={() => window.open(photo.photo_url, '_blank')}
                                         >
-                                            <img
+                                            <ImageWithLoader
                                                 src={photo.photo_url}
-                                                className="w-full h-full object-cover group-hover/img:scale-110 transition-transform duration-700"
                                                 alt="Asset"
+                                                showViewFull={false}
                                             />
                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
                                                 <ExternalLink className="w-5 h-5 text-white" />
@@ -257,10 +259,10 @@ export default function AOIDetail() {
                             >
                                 <Card className="overflow-hidden border-none bg-white shadow-sm hover:shadow-xl transition-all duration-500 rounded-[24px] group h-full flex flex-col">
                                     <div className="relative aspect-[4/3] overflow-hidden">
-                                        <img
+                                        <ImageWithLoader
                                             src={photo.photo_url}
                                             alt="Asset"
-                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
+                                            showViewFull={false}
                                         />
                                         <div className="absolute top-4 right-4">
                                             <Badge className={`${getStatusStyles(photo.status)} border-none shadow-xl backdrop-blur-md px-3 py-1 font-black text-[8px] tracking-widest rounded-full uppercase`}>

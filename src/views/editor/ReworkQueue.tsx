@@ -16,6 +16,7 @@ export default function ReworkQueue() {
     {
       id: 1,
       poi: "Starbucks Coffee",
+      city: "New York",
       surveyor: "John Smith",
       reason: "Blurry storefront photo",
       requested: "2 days ago",
@@ -26,6 +27,7 @@ export default function ReworkQueue() {
     {
       id: 2,
       poi: "CVS Pharmacy",
+      city: "Los Angeles",
       surveyor: "Sarah Johnson",
       reason: "Missing signage photo",
       requested: "1 day ago",
@@ -36,6 +38,7 @@ export default function ReworkQueue() {
     {
       id: 3,
       poi: "Target",
+      city: "Chicago",
       surveyor: "Mike Wilson",
       reason: "Low quality interior shots",
       requested: "5 hours ago",
@@ -47,7 +50,8 @@ export default function ReworkQueue() {
 
   const filteredItems = reworkItems.filter((item) => {
     const matchesSearch = item.poi.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.surveyor.toLowerCase().includes(searchQuery.toLowerCase());
+      item.surveyor.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.city.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || item.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -95,7 +99,7 @@ export default function ReworkQueue() {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="Search by POI or surveyor..."
+                placeholder="Search by POI, surveyor or city..."
                 className="pl-9"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

@@ -7,6 +7,7 @@ import { useEditor } from "@/hooks/useEditor";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { cn } from "@/components/ui/utils";
+import { ImageWithLoader } from "@/components/ImageWithLoader";
 
 export default function AssignedPhotos() {
     const { useAssignedPhotos } = useEditor();
@@ -39,10 +40,10 @@ export default function AssignedPhotos() {
                                     {/* Photo Preview Section */}
                                     <div className="w-24 h-16 md:w-32 md:h-20 relative bg-gray-100 overflow-hidden rounded-md border border-gray-200 shrink-0">
                                         {photo.photo_url ? (
-                                            <img
+                                            <ImageWithLoader
                                                 src={photo.photo_url}
                                                 alt={photo.photo_type}
-                                                className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                                                showViewFull={false}
                                             />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-gray-400">

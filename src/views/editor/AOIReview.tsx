@@ -65,7 +65,8 @@ export default function AOIReview() {
         return aois.filter((aoi: any) => {
             const matchesSearch =
                 (aoi.aoi_name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
-                (aoi.aoi_code?.toLowerCase() || "").includes(searchQuery.toLowerCase());
+                (aoi.aoi_code?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+                (aoi.city?.toLowerCase() || "").includes(searchQuery.toLowerCase());
 
             const matchesStatus = statusFilter === "ALL" || aoi.status === statusFilter;
 
@@ -123,7 +124,7 @@ export default function AOIReview() {
                         <div className="relative w-full sm:w-64">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <Input
-                                placeholder="Search name or code..."
+                                placeholder="Search by name, code or city..."
                                 className="pl-9 h-10 bg-white border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 shadow-sm font-medium text-xs"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}

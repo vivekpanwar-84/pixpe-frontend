@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle, XCircle, Search, Eye, Download, FileText, Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { CheckCircle, XCircle, Search, Eye, Download, FileText, Loader2, Users, Camera } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { managerService } from "@/services/manager.service";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+
+import { ImageWithLoader } from "@/components/ImageWithLoader";
 
 export default function KYCRequests() {
     const [loading, setLoading] = useState(true);
@@ -108,7 +111,11 @@ export default function KYCRequests() {
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <Button variant="ghost" size="sm" onClick={() => { setSelectedRequest(req); setIsViewDialogOpen(true); }}>
+                                            <Button variant="ghost" size="sm" onClick={() => {
+                                                console.log("DEBUG: Selected KYC Request Data:", req);
+                                                setSelectedRequest(req);
+                                                setIsViewDialogOpen(true);
+                                            }}>
                                                 <Eye className="w-4 h-4 mr-2" />
                                                 Review
                                             </Button>
@@ -123,62 +130,119 @@ export default function KYCRequests() {
 
             {/* Review Dialog */}
             <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-                <DialogContent className="max-w-lg">
+                <DialogContent className="max-w-[95vw] w-full max-h-[95vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>Review KYC Document</DialogTitle>
+                        <DialogTitle>Review KYC Submission</DialogTitle>
                         <DialogDescription>
-                            Verify the identity document for {selectedRequest?.name}.
+                            Detailed background and identity verification for {selectedRequest?.name}.
                         </DialogDescription>
                     </DialogHeader>
 
                     {selectedRequest && (
-                        <div className="grid gap-4 py-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <h4 className="font-medium text-sm mb-1">Applicant Details</h4>
-                                    <div className="text-sm">
-                                        <p><span className="text-gray-500">Name:</span> {selectedRequest.name}</p>
-                                        <p><span className="text-gray-500">Email:</span> {selectedRequest.email}</p>
-                                        <p><span className="text-gray-500">Submitted:</span> {new Date(selectedRequest.updatedAt).toLocaleDateString()}</p>
-                                        <p><span className="text-gray-500">User Status:</span>
-                                            <span className={`ml-1 font-medium ${selectedRequest.is_active ? 'text-green-600' : 'text-red-600'}`}>
-                                                {selectedRequest.is_active ? 'Active' : 'Inactive'}
-                                            </span>
-                                        </p>
+                        <div className="space-y-8 py-4">
+                            {/* Personal & Document Info Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {/* Personal Details Section */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 border-b pb-2">
+                                        <Users className="w-4 h-4 text-blue-500" />
+                                        <h4 className="font-semibold text-sm uppercase tracking-wider text-gray-500">Personal Details</h4>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                                        <div>
+                                            <p className="text-gray-400 text-xs">Full Name</p>
+                                            <p className="font-medium">{selectedRequest.kyc_document?.full_name || selectedRequest.name}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-gray-400 text-xs">Date of Birth</p>
+                                            <p className="font-medium">{selectedRequest.kyc_document?.date_of_birth ? format(new Date(selectedRequest.kyc_document.date_of_birth), "PPP") : "N/A"}</p>
+                                        </div>
+                                        <div className="col-span-2">
+                                            <p className="text-gray-400 text-xs">Address</p>
+                                            <p className="font-medium">{selectedRequest.kyc_document?.address || "N/A"}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-gray-400 text-xs">City / State</p>
+                                            <p className="font-medium">{selectedRequest.kyc_document?.city || "N/A"}, {selectedRequest.kyc_document?.state || "N/A"}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-gray-400 text-xs">Pin Code</p>
+                                            <p className="font-medium">{selectedRequest.kyc_document?.pin_code || "N/A"}</p>
+                                        </div>
                                     </div>
                                 </div>
-                                <div>
-                                    <h4 className="font-medium text-sm mb-1">Document Status</h4>
-                                    <Badge
-                                        variant="outline"
-                                        className="bg-yellow-50 text-yellow-700 border-yellow-200"
-                                    >
-                                        {selectedRequest.kyc_status}
-                                    </Badge>
+
+                                {/* Identity & Bank Info Section */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 border-b pb-2">
+                                        <FileText className="w-4 h-4 text-purple-500" />
+                                        <h4 className="font-semibold text-sm uppercase tracking-wider text-gray-500">Document & Bank Details</h4>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                                        <div>
+                                            <p className="text-gray-400 text-xs">ID Type</p>
+                                            <Badge variant="secondary" className="mt-1">{selectedRequest.kyc_document?.document_type || "N/A"}</Badge>
+                                        </div>
+                                        <div>
+                                            <p className="text-gray-400 text-xs">ID Number</p>
+                                            <p className="font-medium tracking-wider">{selectedRequest.kyc_document?.document_number || "N/A"}</p>
+                                        </div>
+                                        <div className="col-span-2 pt-2 border-t mt-1">
+                                            <p className="text-gray-400 text-xs">Bank Account Number</p>
+                                            <p className="font-medium">{selectedRequest.kyc_document?.bank_account_number || "N/A"}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-gray-400 text-xs">IFSC Code</p>
+                                            <p className="font-medium">{selectedRequest.kyc_document?.ifsc_code || "N/A"}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-gray-400 text-xs">Submission Date</p>
+                                            <p className="font-medium">{new Date(selectedRequest.updatedAt).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="border rounded-lg p-2 bg-gray-50 flex items-center justify-center min-h-[200px]">
-                                {selectedRequest.kyc_document_url ? (
-                                    <img
-                                        src={selectedRequest.kyc_document_url}
-                                        alt="KYC Document"
-                                        className="max-h-[300px] object-contain cursor-zoom-in"
-                                        onClick={() => window.open(selectedRequest.kyc_document_url, '_blank')}
-                                    />
-                                ) : (
-                                    <div className="text-center">
-                                        <FileText className="w-16 h-16 text-gray-400 mx-auto mb-2" />
-                                        <p className="text-gray-500">No document image available</p>
-                                    </div>
-                                )}
+                            {/* Documents Image Grid */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 border-b pb-2">
+                                    <Camera className="w-4 h-4 text-green-500" />
+                                    <h4 className="font-semibold text-sm uppercase tracking-wider text-gray-500">Uploaded Documents</h4>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {[
+                                        { label: "ID Front", url: selectedRequest.kyc_document?.document_front_url || selectedRequest.kyc_document_url },
+                                        { label: "ID Back", url: selectedRequest.kyc_document?.document_back_url },
+                                        { label: "Selfie", url: selectedRequest.kyc_document?.selfie_url },
+                                        { label: "Bank Proof", url: selectedRequest.kyc_document?.bank_proof_url }
+                                    ].map((img, idx) => (
+                                        <div key={idx} className="space-y-2">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase text-center">{img.label}</p>
+                                            <div className="aspect-square border rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden group relative shadow-sm hover:shadow-md transition-all duration-300">
+                                                {img.url ? (
+                                                    <ImageWithLoader
+                                                        src={img.url}
+                                                        alt={img.label}
+                                                    />
+                                                ) : (
+                                                    <div className="text-center p-4">
+                                                        <FileText className="w-8 h-8 text-gray-200 mx-auto mb-1" />
+                                                        <p className="text-[10px] text-gray-400">Not Uploaded</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="reason">Rejection Reason (Required for rejection)</Label>
+                            <div className="space-y-3 pt-4 border-l-4 border-yellow-500 pl-4 bg-yellow-50/50 p-4 rounded-r-lg">
+                                <Label htmlFor="reason" className="text-yellow-800 font-semibold">Review Actions</Label>
+                                <p className="text-xs text-yellow-700/70 mb-2 italic">If rejecting, please specify the exact issue (e.g., "Aadhaar back image is blurry")</p>
                                 <Input
                                     id="reason"
-                                    placeholder="e.g. Blurred photo, wrong ID type..."
+                                    placeholder="Enter rejection reason here..."
+                                    className="bg-white border-yellow-200 focus-visible:ring-yellow-500"
                                     value={rejectionReason}
                                     onChange={(e) => setRejectionReason(e.target.value)}
                                 />
@@ -186,23 +250,31 @@ export default function KYCRequests() {
                         </div>
                     )}
 
-                    <DialogFooter className="gap-4">
+                    <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-6 border-t mt-4">
+                        <Button
+                            variant="outline"
+                            className="sm:order-1 order-3 text-gray-500"
+                            onClick={() => setIsViewDialogOpen(false)}
+                            disabled={!!actionLoading}
+                        >
+                            Cancel Review
+                        </Button>
                         <Button
                             variant="destructive"
-                            className="flex-1"
+                            className="sm:order-2 order-2 flex-1"
                             disabled={!!actionLoading}
                             onClick={() => selectedRequest && handleStatusChange(selectedRequest.id, "REJECTED")}
                         >
                             {actionLoading === "REJECTED" ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
-                            Reject
+                            Reject Submission
                         </Button>
                         <Button
-                            className="bg-green-600 hover:bg-green-700 flex-1"
+                            className="bg-green-600 hover:bg-green-700 sm:order-3 order-1 flex-1 shadow-lg shadow-green-100"
                             disabled={!!actionLoading}
                             onClick={() => selectedRequest && handleStatusChange(selectedRequest.id, "APPROVED")}
                         >
                             {actionLoading === "APPROVED" ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
-                            Approve
+                            Approve Verification
                         </Button>
                     </DialogFooter>
                 </DialogContent>

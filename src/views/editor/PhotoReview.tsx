@@ -29,6 +29,7 @@ import {
 import { useEditor } from "@/hooks/useEditor";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { ImageWithLoader } from "@/components/ImageWithLoader";
 
 
 interface ExtractedData {
@@ -102,6 +103,8 @@ export default function PhotoReview() {
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
 
   const parseAiResponse = (text: string, aoi: any): ExtractedData => {
     const getValue = (label: string) => {
@@ -184,6 +187,10 @@ export default function PhotoReview() {
     }
   };
 
+  const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 3));
+  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.5));
+  const handleRotate = () => setRotation(prev => (prev + 90) % 360);
+
 
 
 
@@ -250,27 +257,65 @@ export default function PhotoReview() {
       {/* Desktop: Multi-Panel Layout */}
       <div className="hidden lg:grid lg:grid-cols-[1fr_400px] gap-0 h-[calc(100vh-8rem)]">
         {/* Center Panel - Main Photo View */}
-        <div className="bg-gray-900 flex flex-col items-center justify-center p-4">
+        <div className="bg-gray-900 flex flex-col items-center justify-center p-4 relative overflow-hidden">
           {photo.photo_url ? (
-            <img
-              src={photo.photo_url}
-              alt={photo.photo_type}
-              className="max-w-full max-h-[70vh] object-contain rounded-lg mb-4 shadow-2xl"
-            />
+            <div className="relative w-full h-full flex items-center justify-center overflow-auto custom-scrollbar">
+              <div
+                className="transition-all duration-300 ease-out flex items-center justify-center"
+                style={{
+                  transform: `scale(${zoom}) rotate(${rotation}deg)`,
+                  transformOrigin: 'center center'
+                }}
+              >
+                <img
+                  src={photo.photo_url}
+                  alt={photo.photo_type}
+                  className="max-w-full max-h-[75vh] object-contain rounded-lg shadow-2xl"
+                />
+              </div>
+            </div>
           ) : (
             <div className="bg-gray-800 w-full max-w-2xl aspect-video rounded-lg mb-4 flex items-center justify-center text-gray-500">
               <ImageIcon className="w-12 h-12" />
             </div>
           )}
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm">
-              <ZoomIn className="w-4 h-4" />
-            </Button>
-            <Button variant="secondary" size="sm">
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-black/40 backdrop-blur-md p-2 rounded-full border border-white/10 z-30">
+            <Button
+              variant="secondary"
+              size="icon"
+              className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 text-white border-none"
+              onClick={handleZoomOut}
+            >
               <ZoomOut className="w-4 h-4" />
             </Button>
-            <Button variant="secondary" size="sm">
+            <div className="text-white text-xs font-bold w-12 text-center">
+              {Math.round(zoom * 100)}%
+            </div>
+            <Button
+              variant="secondary"
+              size="icon"
+              className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 text-white border-none"
+              onClick={handleZoomIn}
+            >
+              <ZoomIn className="w-4 h-4" />
+            </Button>
+            <div className="w-px h-4 bg-white/20 mx-1" />
+            <Button
+              variant="secondary"
+              size="icon"
+              className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 text-white border-none"
+              onClick={handleRotate}
+            >
               <RotateCw className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="secondary"
+              size="icon"
+              className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 text-white border-none"
+              onClick={() => { setZoom(1); setRotation(0); }}
+              title="Reset"
+            >
+              <RotateCw className="w-4 h-5 rotate-180" />
             </Button>
           </div>
         </div>
@@ -614,7 +659,11 @@ export default function PhotoReview() {
           <CardContent className="p-0">
             <div className="bg-gray-900 border-b border-gray-100 overflow-hidden rounded-t-lg">
               {photo.photo_url ? (
-                <img src={photo.photo_url} alt={photo.photo_type} className="w-full h-auto object-contain max-h-[60vh]" />
+                <ImageWithLoader
+                  src={photo.photo_url}
+                  alt={photo.photo_type}
+                  showViewFull={false}
+                />
               ) : (
                 <div className="aspect-video flex items-center justify-center text-gray-400">
                   <ImageIcon className="w-12 h-12" />

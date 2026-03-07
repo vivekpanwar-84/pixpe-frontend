@@ -11,7 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSurveyor } from "@/hooks/useSurveyor";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ImageWithSkeleton } from "@/components/ui/ImageWithSkeleton";
+import { ImageWithLoader } from "@/components/ImageWithLoader";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { StatusRestrictionModal } from "@/components/modals/StatusRestrictionModal";
@@ -345,11 +345,10 @@ export default function AOIDetail() {
                         <div key={photo.id} className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
                           <div className="flex gap-4">
                             <div className="w-20 h-20 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
-                              <ImageWithSkeleton
+                              <ImageWithLoader
                                 src={photo.photo_url}
                                 alt={photo.photo_type}
-                                className="w-full h-full object-cover"
-                                priority={idx === 0}
+                                showViewFull={false}
                               />
                             </div>
                             <div className="flex-1 min-w-0">

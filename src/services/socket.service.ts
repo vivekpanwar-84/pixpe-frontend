@@ -12,7 +12,6 @@ class SocketService {
 
         this.socket = io(`${API_URL}/notifications`, {
             query: { userId },
-            transports: ['websocket', 'polling'],
             autoConnect: true,
             reconnection: true,
         });

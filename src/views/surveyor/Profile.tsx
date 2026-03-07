@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useRouter } from "next/navigation";
 import { userService } from "@/services/user.service";
 import { toast } from "sonner";
+import { ImageWithLoader } from "@/components/ImageWithLoader";
 
 export default function SurveyorProfile() {
   const router = useRouter();
@@ -90,7 +91,13 @@ export default function SurveyorProfile() {
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
             <div className="relative">
               {user?.profile_photo ? (
-                <img src={user.profile_photo} alt={user.name} className="w-24 h-24 rounded-full object-cover" />
+                <div className="w-24 h-24 rounded-full overflow-hidden">
+                  <ImageWithLoader
+                    src={user.profile_photo}
+                    alt={user.name}
+                    showViewFull={false}
+                  />
+                </div>
               ) : (
                 <div className="w-24 h-24 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-bold">
                   {user?.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 'U'}

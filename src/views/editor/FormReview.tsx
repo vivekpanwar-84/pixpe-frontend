@@ -17,12 +17,14 @@ import {
     Calendar,
     Filter,
     CheckSquare,
-    Square
+    Square,
+    XCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { ImageWithLoader } from "@/components/ImageWithLoader";
 
 function FormDetailDialog({ form, isOpen, onClose }: { form: any, isOpen: boolean, onClose: () => void }) {
     if (!form) return null;
@@ -45,10 +47,9 @@ function FormDetailDialog({ form, isOpen, onClose }: { form: any, isOpen: boolea
                         <div className="bg-gray-50 p-6 flex items-center justify-center border-r border-gray-100 min-h-[400px]">
                             {form.photo?.photo_url ? (
                                 <div className="relative group w-full h-full flex items-center justify-center">
-                                    <img
+                                    <ImageWithLoader
                                         src={form.photo.photo_url}
                                         alt="Linked Photo"
-                                        className="max-w-full max-h-[60vh] object-contain rounded-2xl shadow-xl transition-transform duration-300 group-hover:scale-[1.02]"
                                     />
                                 </div>
                             ) : (
@@ -197,8 +198,9 @@ export default function FormReview() {
             // Search filter
             const businessName = (form.form?.business_name || "").toLowerCase();
             const aoiName = (form.aoi?.aoi_name || "").toLowerCase();
+            const city = (form.form?.city || form.aoi?.city || "").toLowerCase();
             const query = searchQuery.toLowerCase();
-            const matchesSearch = !searchQuery || businessName.includes(query) || aoiName.includes(query);
+            const matchesSearch = !searchQuery || businessName.includes(query) || aoiName.includes(query) || city.includes(query);
 
             // AOI Filter
             const matchesAoi = aoiFilter === "ALL" || form.aoi_id === aoiFilter || form.aoi?.aoi_code === aoiFilter;
@@ -387,7 +389,7 @@ export default function FormReview() {
                     <div className="relative group">
                         <FileText className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                         <Input
-                            placeholder="Search business or area..."
+                            placeholder="Search by business, area or city..."
                             className="pl-10 h-11 bg-white border-gray-200 rounded-xl focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium text-xs"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
@@ -415,20 +417,36 @@ export default function FormReview() {
                         <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <Input
                             type="date"
-                            className="pl-10 h-11 bg-white border-gray-200 rounded-xl font-medium text-xs appearance-none"
+                            className="pl-10 pr-10 h-11 bg-white border-gray-200 rounded-xl font-medium text-xs appearance-none"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
                         />
+                        {startDate && (
+                            <button
+                                onClick={() => setStartDate("")}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-rose-500 transition-colors"
+                            >
+                                <XCircle className="w-4 h-4" />
+                            </button>
+                        )}
                     </div>
 
                     <div className="relative group">
                         <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <Input
                             type="date"
-                            className="pl-10 h-11 bg-white border-gray-200 rounded-xl font-medium text-xs"
+                            className="pl-10 pr-10 h-11 bg-white border-gray-200 rounded-xl font-medium text-xs"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
                         />
+                        {endDate && (
+                            <button
+                                onClick={() => setEndDate("")}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-rose-500 transition-colors"
+                            >
+                                <XCircle className="w-4 h-4" />
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
@@ -519,10 +537,10 @@ export default function FormReview() {
                                                                 <div className="flex items-center gap-4">
                                                                     <div className="w-12 h-12 rounded-[12px] overflow-hidden border border-gray-100 bg-gray-100 flex-shrink-0 shadow-sm">
                                                                         {form.photo?.photo_url ? (
-                                                                            <img
+                                                                            <ImageWithLoader
                                                                                 src={form.photo.photo_url}
                                                                                 alt="Thumbnail"
-                                                                                className="w-full h-full object-cover transition-transform duration-500 group-hover/item:scale-110"
+                                                                                showViewFull={false}
                                                                             />
                                                                         ) : (
                                                                             <div className="w-full h-full flex items-center justify-center text-gray-300">

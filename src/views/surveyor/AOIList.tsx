@@ -25,8 +25,11 @@ export default function AOIList() {
       const name = aoi.aoi_name || aoi.name || "";
       const status = aoi.status || "";
       const priority = aoi.priority || "";
+      const city = aoi.city || "";
 
-      const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch =
+        name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        city.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = statusFilter === "all" || status.toLowerCase() === statusFilter.toLowerCase();
       const matchesPriority = priorityFilter === "all" || priority.toLowerCase() === priorityFilter.toLowerCase();
       return matchesSearch && matchesStatus && matchesPriority;
@@ -113,7 +116,7 @@ export default function AOIList() {
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
-            placeholder="Search AOIs..."
+            placeholder="Search by name or city..."
             className="pl-9"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

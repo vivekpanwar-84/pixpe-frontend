@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useSurveyor } from "@/hooks/useSurveyor";
-import { ImageWithSkeleton } from "@/components/ui/ImageWithSkeleton";
+import { ImageWithLoader } from "@/components/ImageWithLoader";
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import getCroppedImg from "@/utils/cropImage";
@@ -394,10 +394,10 @@ export default function PhotoCapture() {
                     {localPhotos.map((photo) => (
                       <div key={photo.id} className="relative group">
                         <div className="bg-gray-200 aspect-square rounded-lg flex items-center justify-center overflow-hidden border border-blue-200">
-                          <ImageWithSkeleton
+                          <ImageWithLoader
                             src={photo.previewUrl}
                             alt={photo.type}
-                            className="w-full h-full object-cover"
+                            showViewFull={false}
                           />
                         </div>
                         <div className="absolute inset-x-0 bottom-0 bg-blue-600/80 text-white p-2 rounded-b-lg">
@@ -433,7 +433,11 @@ export default function PhotoCapture() {
                     {rejectedPhotos.map((photo: any) => (
                       <div key={photo.id} className="flex gap-3 bg-white p-3 rounded-lg border border-red-100 shadow-sm relative group">
                         <div className="w-20 h-20 rounded-md overflow-hidden border border-gray-100 shrink-0">
-                          <ImageWithSkeleton src={photo.photo_url} alt={photo.photo_type} className="w-full h-full object-cover" />
+                          <ImageWithLoader
+                            src={photo.photo_url}
+                            alt={photo.photo_type}
+                            showViewFull={false}
+                          />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
@@ -491,10 +495,10 @@ export default function PhotoCapture() {
                     {activePhotos.map((photo: any) => (
                       <div key={photo.id} className="relative group">
                         <div className="bg-gray-200 aspect-square rounded-lg flex items-center justify-center overflow-hidden border border-gray-100">
-                          <ImageWithSkeleton
+                          <ImageWithLoader
                             src={photo.photo_url}
                             alt={photo.photo_type}
-                            className="w-full h-full object-cover"
+                            showViewFull={false}
                           />
                         </div>
                         <div className="absolute inset-x-0 bottom-0 bg-black/70 text-white p-2 rounded-b-lg">
