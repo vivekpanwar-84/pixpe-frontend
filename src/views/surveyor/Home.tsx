@@ -17,7 +17,7 @@ export default function SurveyorHome() {
     { icon: MapPin, label: "Active AOIs", value: "0", color: "text-blue-600", bg: "bg-blue-50" },
     { icon: Camera, label: "Photos Today", value: "0", color: "text-green-600", bg: "bg-green-50" },
     { icon: CheckCircle, label: "Completed", value: "0", color: "text-purple-600", bg: "bg-purple-50" },
-    { icon: DollarSign, label: "Today's Earnings", value: "₹0", color: "text-orange-600", bg: "bg-orange-50" },
+    { icon: Award, label: "Total Pixpoints", value: "0", color: "text-orange-600", bg: "bg-orange-50" },
   ]);
 
   const [recentAOIs, setRecentAOIs] = useState<any[]>([]);
@@ -25,11 +25,11 @@ export default function SurveyorHome() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [profileData, aois, uploads, earnings] = await Promise.all([
+        const [profileData, aois, uploads, balanceData] = await Promise.all([
           userService.getProfile(),
           surveyorService.getAssignedAois(),
           surveyorService.getMyUploads(),
-          surveyorService.getEarnings(),
+          surveyorService.getMyBalance(),
         ]);
 
         setProfile(profileData);
@@ -41,14 +41,11 @@ export default function SurveyorHome() {
         // Calculate completed AOIs
         const completedAois = aois.filter((a: any) => a.status === 'CLOSED' || a.status === 'SUBMITTED').length;
 
-        // Today's earnings (simplified for now, ideally backend provides this)
-        const dailyEarnings = earnings.stats?.today || 0;
-
         setKpis([
           { icon: MapPin, label: "Active AOIs", value: aois.length.toString(), color: "text-blue-600", bg: "bg-blue-50" },
           { icon: Camera, label: "Photos Today", value: photosToday.toString(), color: "text-green-600", bg: "bg-green-50" },
           { icon: CheckCircle, label: "Completed", value: completedAois.toString(), color: "text-purple-600", bg: "bg-purple-50" },
-          { icon: DollarSign, label: "Today's Earnings", value: `₹${dailyEarnings}`, color: "text-orange-600", bg: "bg-orange-50" },
+          { icon: Award, label: "Total Pixpoints", value: `${balanceData.total_pixpoints}`, color: "text-orange-600", bg: "bg-orange-50" },
         ]);
 
         setRecentAOIs(aois.slice(0, 3));

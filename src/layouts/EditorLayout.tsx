@@ -20,7 +20,7 @@ export default function EditorLayout({ children }: { children: React.ReactNode }
     { path: "/editor/aoi", icon: MapPin, label: "AOI Review" },
     { path: "/editor/assigned-photos", icon: ImageIcon, label: "Assigned Photos" },
     // { path: "/editor/review", icon: ImageIcon, label: "Photo Review" },
-    { path: "/editor/form-review", icon: FileText, label: "Form Review" },
+    { path: "/editor/form-review", icon: FileText, label: "Report Review" },
     { path: "/editor/rework", icon: RefreshCw, label: "Rework Queue" },
   ];
 

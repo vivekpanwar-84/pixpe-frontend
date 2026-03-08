@@ -26,154 +26,137 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Separator } from "@/components/ui/separator";
 import { ImageWithLoader } from "@/components/ImageWithLoader";
 
-function FormDetailDialog({ form, isOpen, onClose }: { form: any, isOpen: boolean, onClose: () => void }) {
+function ReportDetailDialog({ form, isOpen, onClose }: { form: any, isOpen: boolean, onClose: () => void }) {
     if (!form) return null;
     const formData = form.form || {};
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0 rounded-[28px] border-none shadow-2xl">
-                <DialogHeader className="p-6 border-b bg-white">
-                    <DialogTitle className="flex items-center gap-3 text-xl font-semibold text-gray-900">
-                        <div className="bg-blue-50 p-2 rounded-xl">
-                            <FileText className="w-5 h-5 text-blue-600" />
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col p-0 rounded-[24px] border-none shadow-2xl">
+                <DialogHeader className="p-6 border-b bg-white flex flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className="bg-blue-50 p-2.5 rounded-xl flex-shrink-0">
+                            <FileText className="w-6 h-6 text-blue-600" />
                         </div>
-                        {formData.business_name || "Untitled Business"}
-                    </DialogTitle>
-                </DialogHeader>
-                <div className="flex-1 overflow-y-auto">
-                    <div className="grid md:grid-cols-2 gap-0 h-full">
-                        {/* Photo Side */}
-                        <div className="bg-gray-50 p-6 flex items-center justify-center border-r border-gray-100 min-h-[400px]">
+                        <div className="space-y-1">
+                            <DialogTitle className="text-xl font-bold text-gray-900 leading-none">
+                                {formData.business_name || "Untitled Business"}
+                            </DialogTitle>
+                            <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-[10px] uppercase tracking-wider font-semibold border-blue-100 text-blue-600 bg-blue-50/50">
+                                    {formData.business_category || "General"}
+                                </Badge>
+                                <span className="text-gray-300 text-xs">•</span>
+                                <span className="text-[10px] text-gray-400 font-medium uppercase tracking-widest">
+                                    ID: {form.id.slice(0, 8)}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Compact Photo in Header */}
+                    <div className="flex items-center gap-4">
+                        <div className="h-16 w-16 rounded-xl overflow-hidden border border-gray-100 shadow-sm bg-gray-50 group relative cursor-pointer ring-2 ring-gray-100 hover:ring-blue-200 transition-all">
                             {form.photo?.photo_url ? (
-                                <div className="relative group w-full h-full flex items-center justify-center">
-                                    <ImageWithLoader
-                                        src={form.photo.photo_url}
-                                        alt="Linked Photo"
-                                    />
-                                </div>
+                                <ImageWithLoader
+                                    src={form.photo.photo_url}
+                                    alt="Linked Photo"
+                                    showViewFull={true}
+                                />
                             ) : (
-                                <div className="aspect-square w-full bg-gray-200 rounded-2xl flex flex-col items-center justify-center text-gray-400 gap-3 border-2 border-dashed border-gray-300">
-                                    <ImageIcon className="w-12 h-12" />
-                                    <span className="text-sm font-medium">No photo available</span>
+                                <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                    <ImageIcon className="w-6 h-6" />
                                 </div>
                             )}
                         </div>
+                    </div>
+                </DialogHeader>
 
-                        {/* Data Side */}
-                        <div className="p-8 space-y-8 bg-white">
-                            <div className="space-y-6">
-                                <div>
-                                    <h3 className="text-[10px] font-semibold text-blue-600 uppercase tracking-[0.2em] mb-4">Business Information</h3>
-                                    <div className="grid gap-5">
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-[11px] font-medium text-gray-400 uppercase">Business Name</span>
-                                            <span className="font-semibold text-gray-900 text-lg">{formData.business_name || "N/A"}</span>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="flex flex-col gap-1">
-                                                <span className="text-[11px] font-medium text-gray-400 uppercase">Category</span>
-                                                <span className="font-semibold text-gray-900">{formData.business_category || "N/A"}</span>
-                                            </div>
-                                            <div className="flex flex-col gap-1">
-                                                <span className="text-[11px] font-medium text-gray-400 uppercase">Sub-Category</span>
-                                                <span className="font-semibold text-gray-900">{formData.business_sub_category || "N/A"}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <Separator className="bg-gray-100" />
-
-                                <div>
-                                    <h3 className="text-[10px] font-semibold text-blue-600 uppercase tracking-[0.2em] mb-4">Contact Details</h3>
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-[11px] font-medium text-gray-400 uppercase">Phone</span>
-                                            <span className="font-semibold text-gray-900">{formData.phone || "N/A"}</span>
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-[11px] font-medium text-gray-400 uppercase">Alt Phone</span>
-                                            <span className="font-semibold text-gray-900">{formData.alternate_phone || "N/A"}</span>
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-[11px] font-medium text-gray-400 uppercase">Email</span>
-                                            <span className="font-semibold text-gray-900 truncate">{formData.email || "N/A"}</span>
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-[11px] font-medium text-gray-400 uppercase">Website</span>
-                                            <span className="font-semibold text-gray-900 truncate">{formData.website || "N/A"}</span>
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-[11px] font-medium text-gray-400 uppercase">Contact Person</span>
-                                            <span className="font-semibold text-gray-900">{formData.contact_person_name || "N/A"}</span>
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-[11px] font-medium text-gray-400 uppercase">Designation</span>
-                                            <span className="font-semibold text-gray-900">{formData.contact_person_designation || "N/A"}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <Separator className="bg-gray-100" />
-
-                                <div>
-                                    <h3 className="text-[10px] font-semibold text-blue-600 uppercase tracking-[0.2em] mb-4">Location Details</h3>
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <div className="flex flex-col gap-1 col-span-2">
-                                            <span className="text-[11px] font-medium text-gray-400 uppercase">Address Line 1</span>
-                                            <span className="font-semibold text-gray-900 leading-relaxed text-sm">{formData.address_line1 || "N/A"}</span>
-                                        </div>
-                                        <div className="flex flex-col gap-1 col-span-2">
-                                            <span className="text-[11px] font-medium text-gray-400 uppercase">Address Line 2</span>
-                                            <span className="font-semibold text-gray-900 leading-relaxed text-sm">{formData.address_line2 || "N/A"}</span>
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-[11px] font-medium text-gray-400 uppercase">Landmark</span>
-                                            <span className="font-semibold text-gray-900">{formData.landmark || "N/A"}</span>
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-[11px] font-medium text-gray-400 uppercase">City</span>
-                                            <span className="font-semibold text-gray-900">{formData.city || "N/A"}</span>
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-[11px] font-medium text-gray-400 uppercase">State</span>
-                                            <span className="font-semibold text-gray-900">{formData.state || "N/A"}</span>
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-[11px] font-medium text-gray-400 uppercase">PIN Code</span>
-                                            <span className="font-semibold text-gray-900">{formData.pin_code || "N/A"}</span>
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-[11px] font-medium text-gray-400 uppercase">Latitude</span>
-                                            <span className="font-semibold text-gray-900">{formData.latitude || "N/A"}</span>
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-[11px] font-medium text-gray-400 uppercase">Longitude</span>
-                                            <span className="font-semibold text-gray-900">{formData.longitude || "N/A"}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <Separator className="bg-gray-100" />
-
-                                <div>
-                                    <h3 className="text-[10px] font-semibold text-blue-600 uppercase tracking-[0.2em] mb-4">Additional Information</h3>
-                                    <div className="space-y-4">
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-[11px] font-medium text-gray-400 uppercase">Notes</span>
-                                            <p className="text-sm font-medium text-gray-600 leading-relaxed bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                                {formData.notes || "No additional notes provided."}
-                                            </p>
-                                        </div>
-                                    </div>
+                <div className="flex-1 overflow-y-auto bg-gray-50/30">
+                    <div className="p-8 space-y-10">
+                        {/* Business Info Grid */}
+                        <section className="space-y-6">
+                            <div className="flex items-center gap-3">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                                <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em]">Business Profile</h3>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                                <DetailItem label="Business Name" value={formData.business_name} />
+                                <DetailItem label="Category" value={formData.business_category} />
+                                <DetailItem label="Sub-Category" value={formData.business_sub_category} />
+                                <DetailItem label="Contact Person" value={formData.contact_person_name} />
+                                <div className="lg:col-span-1">
+                                    <DetailItem label="Designation" value={formData.contact_person_designation} />
                                 </div>
                             </div>
-                        </div>
+                        </section>
+
+                        <Separator className="bg-gray-100/80" />
+
+                        {/* Contact Info Grid */}
+                        <section className="space-y-6">
+                            <div className="flex items-center gap-3">
+                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                                <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em]">Contact Details</h3>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                                <DetailItem label="Phone" value={formData.phone} copyable />
+                                <DetailItem label="Alt Phone" value={formData.alternate_phone} />
+                                <DetailItem label="Email" value={formData.email} isEmail />
+                                <DetailItem label="Website" value={formData.website} isLink />
+                            </div>
+                        </section>
+
+                        <Separator className="bg-gray-100/80" />
+
+                        {/* Location Details Grid */}
+                        <section className="space-y-6">
+                            <div className="flex items-center gap-3">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em]">Location Information</h3>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                                <div className="lg:col-span-2">
+                                    <DetailItem label="Full Address" value={`${formData.address_line1 || ""}, ${formData.address_line2 || ""}`} />
+                                </div>
+                                <DetailItem label="Landmark" value={formData.landmark} />
+                                <DetailItem label="City" value={formData.city} />
+                                <DetailItem label="State" value={formData.state} />
+                                <DetailItem label="PIN Code" value={formData.pin_code} />
+                                <DetailItem label="Latitude" value={formData.latitude} />
+                                <DetailItem label="Longitude" value={formData.longitude} />
+                            </div>
+                        </section>
+
+                        <Separator className="bg-gray-100/80" />
+
+                        {/* Observations / AI Insights */}
+                        <section className="space-y-6">
+                            <div className="flex items-center gap-3">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em]">Additional Notes</h3>
+                            </div>
+                            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm leading-relaxed text-gray-600 text-sm font-medium">
+                                {formData.notes || "No additional notes provided."}
+                            </div>
+                        </section>
                     </div>
                 </div>
             </DialogContent>
         </Dialog>
+    );
+}
+
+function DetailItem({ label, value, copyable = false, isEmail = false, isLink = false }: { label: string, value: any, copyable?: boolean, isEmail?: boolean, isLink?: boolean }) {
+    return (
+        <div className="space-y-1.5 group">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
+            <div className="flex items-center gap-2">
+                <span className={`text-[13px] font-semibold text-gray-900 break-all ${!value ? 'text-gray-300 italic font-normal' : ''}`}>
+                    {value || "Not Provided"}
+                </span>
+            </div>
+        </div>
     );
 }
 
@@ -353,13 +336,13 @@ export default function FormReview() {
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div className="space-y-1">
                         <h1 className="text-2xl lg:text-3xl font-semibold text-gray-900 tracking-tight flex items-center gap-3">
-                            Form Review
+                            Report Review
                             <Badge className="bg-blue-600 text-[10px] font-medium uppercase px-2 py-0.5 rounded-lg border-none shadow-sm">
                                 Survey Data
                             </Badge>
                         </h1>
                         <p className="text-gray-500 font-medium text-xs tracking-wider">
-                            Review detailed data forms submitted for your assigned areas
+                            Review detailed data reports submitted for your assigned areas
                         </p>
                     </div>
 
@@ -456,7 +439,7 @@ export default function FormReview() {
                     <div className="bg-white w-20 h-20 rounded-3xl shadow-sm flex items-center justify-center mx-auto mb-6 border border-gray-100">
                         <FileText className="w-10 h-10 text-gray-200" />
                     </div>
-                    <p className="text-gray-400 font-semibold uppercase text-xs tracking-widest">No forms found matching filters</p>
+                    <p className="text-gray-400 font-semibold uppercase text-xs tracking-widest">No reports found matching filters</p>
                 </div>
             ) : (
                 <div className="space-y-4">
@@ -493,7 +476,7 @@ export default function FormReview() {
                                                 <h3 className="font-semibold text-gray-900 text-lg tracking-tight">{group.aoi.aoi_name}</h3>
                                                 <div className="flex items-center gap-2 mt-0.5">
                                                     <span className={`text-[10px] font-semibold uppercase tracking-wider ${isAoiPartiallySelected || isAoiFullySelected ? 'text-blue-600' : 'text-gray-400'}`}>
-                                                        {group.forms.length} {group.forms.length === 1 ? 'Form' : 'Forms'}
+                                                        {group.forms.length} {group.forms.length === 1 ? 'Report' : 'Reports'}
                                                     </span>
                                                     <span className="text-gray-200 text-xs">•</span>
                                                     <span className="text-[10px] font-medium text-gray-400 uppercase">
@@ -589,7 +572,7 @@ export default function FormReview() {
                 </div>
             )}
 
-            <FormDetailDialog
+            <ReportDetailDialog
                 form={selectedForm}
                 isOpen={!!selectedForm}
                 onClose={() => setSelectedForm(null)}

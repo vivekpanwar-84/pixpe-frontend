@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, MapPin, CheckSquare, BarChart3, Menu, FileText, LogOut, ClipboardList, Users } from "lucide-react";
+import { LayoutDashboard, MapPin, CheckSquare, BarChart3, Menu, FileText, LogOut, ClipboardList, Users, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -21,6 +21,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
     { path: "/manager/aoi-requests", icon: ClipboardList, label: "AOI Requests" },
     { path: "/manager/kyc-requests", icon: FileText, label: "KYC Requests" },
     { path: "/manager/forms", icon: FileText, label: "Forms Management" },
+    { path: "/manager/rewards", icon: Award, label: "Rewards Request" },
     { path: "/manager/analytics", icon: BarChart3, label: "Analytics" },
   ];
 

@@ -58,6 +58,16 @@ export const surveyorService = {
         return response.data;
     },
 
+    getSubmittableAois: async () => {
+        const response = await api.get('/rewards/submittable-aois');
+        return response.data;
+    },
+
+    getMyBalance: async () => {
+        const response = await api.get('/rewards/balance');
+        return response.data;
+    },
+
     requestPayout: async (data: {
         aoi_id: string;
         total_photos_submitted: number;

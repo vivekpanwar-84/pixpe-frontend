@@ -18,13 +18,14 @@ export default function AOIMapView() {
     const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedState, setSelectedState] = useState("all");
+    const [typeFilter, setTypeFilter] = useState<"all" | "mine" | "available">("all");
     const [selectedAoi, setSelectedAoi] = useState<any>(null);
     const [focusedAoiId, setFocusedAoiId] = useState<string | null>(null);
     const { useProfile } = useAuth();
     const { data: profile } = useProfile();
 
     const { data: aois, isLoading, error } = useQuery({
-        queryKey: ["all-aois"],
+        queryKey: ["all-viewable-aois"],
         queryFn: () => surveyorService.getAllAois(false),
     });
 
@@ -60,10 +61,17 @@ export default function AOIMapView() {
                 (aoi.city && aoi.city.toLowerCase().includes(searchQuery.toLowerCase()));
 
             const matchesState = selectedState === "all" || aoi.state === selectedState;
+            const isUnassigned = !aoi.assigned_to_surveyor_id;
+            const isMine = aoi.assigned_to_surveyor_id === profile?.id;
 
-            return matchesSearch && matchesState;
+            const matchesType =
+                typeFilter === "all" ||
+                (typeFilter === "mine" && isMine) ||
+                (typeFilter === "available" && isUnassigned);
+
+            return matchesSearch && matchesState && matchesType && (isUnassigned || isMine);
         });
-    }, [aois, searchQuery, selectedState]);
+    }, [aois, searchQuery, selectedState, typeFilter, profile?.id]);
 
 
     const handleRequest = (aoiId: string) => {
@@ -137,6 +145,32 @@ export default function AOIMapView() {
                         </SelectContent>
                     </Select>
                 </div>
+                <div className="flex bg-gray-100/80 p-1 rounded-xl gap-1">
+                    <Button
+                        variant={typeFilter === "all" ? "default" : "ghost"}
+                        size="sm"
+                        className={`h-9 rounded-lg text-xs font-bold px-4 ${typeFilter === "all" ? "bg-white text-gray-900 shadow-sm hover:bg-white" : "text-gray-500"}`}
+                        onClick={() => setTypeFilter("all")}
+                    >
+                        All
+                    </Button>
+                    <Button
+                        variant={typeFilter === "mine" ? "default" : "ghost"}
+                        size="sm"
+                        className={`h-9 rounded-lg text-xs font-bold px-4 ${typeFilter === "mine" ? "bg-blue-600 text-white shadow-sm hover:bg-blue-700" : "text-gray-500"}`}
+                        onClick={() => setTypeFilter("mine")}
+                    >
+                        Your Area
+                    </Button>
+                    <Button
+                        variant={typeFilter === "available" ? "default" : "ghost"}
+                        size="sm"
+                        className={`h-9 rounded-lg text-xs font-bold px-4 ${typeFilter === "available" ? "bg-amber-500 text-white shadow-sm hover:bg-amber-600" : "text-gray-500"}`}
+                        onClick={() => setTypeFilter("available")}
+                    >
+                        Request Area
+                    </Button>
+                </div>
             </div>
 
             <div className="flex-1 flex flex-col md:flex-row gap-6 min-h-0">
@@ -156,9 +190,9 @@ export default function AOIMapView() {
                                 <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
                                 <span>Available for Request</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
-                                <span>Completed/Closed</span>
+                            <div className="flex items-center gap-2 text-gray-400">
+                                <span className="w-3 h-3 rounded-full bg-blue-400"></span>
+                                <span>Pending Request</span>
                             </div>
                         </div>
                     </CardContent>
@@ -196,23 +230,14 @@ export default function AOIMapView() {
 
                                             <div className="flex items-center justify-between mt-4">
                                                 <div className="flex items-center gap-2">
-                                                    {aoi.assigned_to_surveyor_id ? (
-                                                        <div className={`flex items-center gap-1.5 text-xs font-medium ${aoi.assigned_to_surveyor_id === profile?.id ? 'text-blue-600' : 'text-gray-500'}`}>
-                                                            {aoi.assigned_to_surveyor_id === profile?.id ? (
-                                                                <>
-                                                                    <CheckCircle2 className="w-3.5 h-3.5" />
-                                                                    Your Assigned Area
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <Info className="w-3.5 h-3.5" />
-                                                                    Assigned to Another
-                                                                </>
-                                                            )}
+                                                    {aoi.assigned_to_surveyor_id === profile?.id ? (
+                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg uppercase tracking-tight">
+                                                            <CheckCircle2 className="w-3.5 h-3.5" />
+                                                            Your Area
                                                         </div>
                                                     ) : request ? (
-                                                        <div className={`flex items-center gap-1.5 text-xs font-medium ${request.status === 'PENDING' ? 'text-yellow-600' :
-                                                            request.status === 'APPROVED' ? 'text-green-600' : 'text-red-600'
+                                                        <div className={`flex items-center gap-1.5 text-xs font-medium ${request.status === 'PENDING' ? 'text-amber-600 bg-amber-50 px-2 py-1 rounded-lg' :
+                                                            request.status === 'APPROVED' ? 'text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg' : 'text-red-600 bg-red-50 px-2 py-1 rounded-lg'
                                                             }`}>
                                                             {request.status === 'PENDING' ? (
                                                                 <>
@@ -231,7 +256,7 @@ export default function AOIMapView() {
                                                     ) : (
                                                         <Button
                                                             size="sm"
-                                                            className="h-8 text-[11px] gap-1.5 px-3 bg-blue-600 hover:bg-blue-700"
+                                                            className="h-8 text-[11px] gap-1.5 px-3 bg-blue-600 hover:bg-blue-700 shadow-sm"
                                                             onClick={() => handleRequest(aoi.id)}
                                                             disabled={requestMutation.isPending}
                                                         >
