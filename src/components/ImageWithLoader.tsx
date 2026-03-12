@@ -10,6 +10,7 @@ interface ImageWithLoaderProps {
     className?: string;
     showViewFull?: boolean;
     onViewFull?: () => void;
+    objectFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down';
 }
 
 export function ImageWithLoader({
@@ -17,7 +18,8 @@ export function ImageWithLoader({
     alt,
     className = "",
     showViewFull = true,
-    onViewFull
+    onViewFull,
+    objectFit = 'cover'
 }: ImageWithLoaderProps) {
     const [isLoading, setIsLoading] = useState(true);
 
@@ -40,7 +42,7 @@ export function ImageWithLoader({
             <img
                 src={src}
                 alt={alt}
-                className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-110 ${isLoading ? 'opacity-0 scale-95' : 'opacity-100 scale-100'} cursor-zoom-in`}
+                className={`w-full h-full object-${objectFit} transition-all duration-500 group-hover:scale-110 ${isLoading ? 'opacity-0 scale-95' : 'opacity-100 scale-100'} cursor-zoom-in`}
                 onLoad={() => setIsLoading(false)}
                 onClick={handleViewFull}
             />

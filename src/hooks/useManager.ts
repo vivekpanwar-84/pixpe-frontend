@@ -26,6 +26,13 @@ export const useManager = () => {
         },
     });
 
+    const bulkCreateAoiMutation = useMutation({
+        mutationFn: (formData: FormData) => managerService.bulkCreateAoi(formData),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['aois'] });
+        },
+    });
+
     const updateAoiMutation = useMutation({
         mutationFn: ({ id, data }: { id: string; data: any }) =>
             managerService.updateAoi(id, data),
@@ -84,6 +91,7 @@ export const useManager = () => {
         assignAoi: assignAoiMutation,
         bulkAssignAoi: bulkAssignAoiMutation,
         createAoi: createAoiMutation,
+        bulkCreateAoi: bulkCreateAoiMutation,
         updateAoi: updateAoiMutation,
         closeAoi: closeAoiMutation,
         useAllPhotos,

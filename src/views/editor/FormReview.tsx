@@ -32,114 +32,117 @@ function ReportDetailDialog({ form, isOpen, onClose }: { form: any, isOpen: bool
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col p-0 rounded-[24px] border-none shadow-2xl">
-                <DialogHeader className="p-6 border-b bg-white flex flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className="bg-blue-50 p-2.5 rounded-xl flex-shrink-0">
-                            <FileText className="w-6 h-6 text-blue-600" />
-                        </div>
-                        <div className="space-y-1">
-                            <DialogTitle className="text-xl font-bold text-gray-900 leading-none">
-                                {formData.business_name || "Untitled Business"}
-                            </DialogTitle>
-                            <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-[10px] uppercase tracking-wider font-semibold border-blue-100 text-blue-600 bg-blue-50/50">
-                                    {formData.business_category || "General"}
-                                </Badge>
-                                <span className="text-gray-300 text-xs">•</span>
-                                <span className="text-[10px] text-gray-400 font-medium uppercase tracking-widest">
-                                    ID: {form.id.slice(0, 8)}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Compact Photo in Header */}
-                    <div className="flex items-center gap-4">
-                        <div className="h-16 w-16 rounded-xl overflow-hidden border border-gray-100 shadow-sm bg-gray-50 group relative cursor-pointer ring-2 ring-gray-100 hover:ring-blue-200 transition-all">
-                            {form.photo?.photo_url ? (
-                                <ImageWithLoader
-                                    src={form.photo.photo_url}
-                                    alt="Linked Photo"
-                                    showViewFull={true}
-                                />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-300">
-                                    <ImageIcon className="w-6 h-6" />
+            <DialogContent className="sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden border-none shadow-2xl md:h-[80vh] flex flex-col">
+                <div className="flex flex-col md:flex-row h-full overflow-hidden">
+                    {/* Photo Section */}
+                    <div className="md:w-3/5 bg-slate-900 relative min-h-[300px] md:min-h-0 flex items-center justify-center">
+                        {form.photo?.photo_url ? (
+                            <div className="absolute inset-0 p-4">
+                                <div className="relative w-full h-full rounded-xl overflow-hidden shadow-sm">
+                                    <ImageWithLoader
+                                        src={form.photo.photo_url}
+                                        alt="POI Business"
+                                        objectFit="contain"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none z-10" />
+                                    <div className="absolute bottom-4 left-4 right-4 text-white text-left z-20">
+                                        <Badge className="mb-2 bg-blue-600/80 backdrop-blur-md border-none text-[10px] uppercase font-bold tracking-wider">
+                                            {form.photo.photo_type?.replace('_', ' ') || 'POI Photo'}
+                                        </Badge>
+                                        <div className="flex items-center gap-1.5 text-xs text-blue-100">
+                                            <MapPin className="w-3 h-3" />
+                                            {form.photo.latitude}, {form.photo.longitude}
+                                        </div>
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-                    </div>
-                </DialogHeader>
-
-                <div className="flex-1 overflow-y-auto bg-gray-50/30">
-                    <div className="p-8 space-y-10">
-                        {/* Business Info Grid */}
-                        <section className="space-y-6">
-                            <div className="flex items-center gap-3">
-                                <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                                <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em]">Business Profile</h3>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                                <DetailItem label="Business Name" value={formData.business_name} />
-                                <DetailItem label="Category" value={formData.business_category} />
-                                <DetailItem label="Sub-Category" value={formData.business_sub_category} />
-                                <DetailItem label="Contact Person" value={formData.contact_person_name} />
-                                <div className="lg:col-span-1">
+                        ) : (
+                            <div className="flex flex-col items-center gap-2 text-gray-400 opacity-20">
+                                <ImageIcon className="w-12 h-12" />
+                                <p className="text-sm">No photo available</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Details Section */}
+                    <div className="md:w-2/5 flex flex-col bg-white overflow-hidden border-l border-gray-100">
+                        <DialogHeader className="p-6 border-b bg-white shrink-0">
+                            <div className="flex flex-col gap-2 text-left">
+                                <div className="flex items-center justify-between">
+                                    <Badge variant="outline" className="text-[10px] uppercase tracking-wider font-semibold border-blue-100 text-blue-600 bg-blue-50/50">
+                                        {formData.business_category || "General"}
+                                    </Badge>
+                                    <span className="text-[10px] text-gray-400 font-medium uppercase tracking-widest">
+                                        #{form.id.slice(0, 8)}
+                                    </span>
+                                </div>
+                                <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                                    {formData.business_name || "Untitled Business"}
+                                </DialogTitle>
+                            </div>
+                        </DialogHeader>
+
+                        <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+                            {/* Business Profile */}
+                            <section className="space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                                    <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Business Profile</h3>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <DetailItem label="Sub-Category" value={formData.business_sub_category} />
+                                    <DetailItem label="Contact Person" value={formData.contact_person_name} />
                                     <DetailItem label="Designation" value={formData.contact_person_designation} />
                                 </div>
-                            </div>
-                        </section>
+                            </section>
 
-                        <Separator className="bg-gray-100/80" />
-
-                        {/* Contact Info Grid */}
-                        <section className="space-y-6">
-                            <div className="flex items-center gap-3">
-                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                                <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em]">Contact Details</h3>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                                <DetailItem label="Phone" value={formData.phone} copyable />
-                                <DetailItem label="Alt Phone" value={formData.alternate_phone} />
-                                <DetailItem label="Email" value={formData.email} isEmail />
-                                <DetailItem label="Website" value={formData.website} isLink />
-                            </div>
-                        </section>
-
-                        <Separator className="bg-gray-100/80" />
-
-                        {/* Location Details Grid */}
-                        <section className="space-y-6">
-                            <div className="flex items-center gap-3">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em]">Location Information</h3>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                                <div className="lg:col-span-2">
-                                    <DetailItem label="Full Address" value={`${formData.address_line1 || ""}, ${formData.address_line2 || ""}`} />
+                            {/* Contact Details */}
+                            <section className="space-y-4 pt-4 border-t border-gray-50">
+                                <div className="flex items-center gap-3">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                                    <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Contact Details</h3>
                                 </div>
-                                <DetailItem label="Landmark" value={formData.landmark} />
-                                <DetailItem label="City" value={formData.city} />
-                                <DetailItem label="State" value={formData.state} />
-                                <DetailItem label="PIN Code" value={formData.pin_code} />
-                                <DetailItem label="Latitude" value={formData.latitude} />
-                                <DetailItem label="Longitude" value={formData.longitude} />
-                            </div>
-                        </section>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <DetailItem label="Phone" value={formData.phone} copyable />
+                                    <DetailItem label="Alt Phone" value={formData.alternate_phone} />
+                                    <DetailItem label="Email" value={formData.email} isEmail />
+                                    <DetailItem label="Website" value={formData.website} isLink />
+                                </div>
+                            </section>
 
-                        <Separator className="bg-gray-100/80" />
+                            {/* Location Information */}
+                            <section className="space-y-4 pt-4 border-t border-gray-50">
+                                <div className="flex items-center gap-3">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                    <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Location</h3>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-100">
+                                        <p className="text-sm text-gray-700 font-medium leading-relaxed">
+                                            {formData.address_line1} {formData.address_line2}
+                                        </p>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            {formData.landmark ? `Near ${formData.landmark}, ` : ""}{formData.city}, {formData.state} - {formData.pin_code}
+                                        </p>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <DetailItem label="Latitude" value={formData.latitude} />
+                                        <DetailItem label="Longitude" value={formData.longitude} />
+                                    </div>
+                                </div>
+                            </section>
 
-                        {/* Observations / AI Insights */}
-                        <section className="space-y-6">
-                            <div className="flex items-center gap-3">
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                                <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em]">Additional Notes</h3>
-                            </div>
-                            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm leading-relaxed text-gray-600 text-sm font-medium">
-                                {formData.notes || "No additional notes provided."}
-                            </div>
-                        </section>
+                            {/* Additional Notes */}
+                            <section className="space-y-4 pt-4 border-t border-gray-50 pb-4">
+                                <div className="flex items-center gap-3">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                    <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Observations</h3>
+                                </div>
+                                <div className="bg-orange-50/30 p-4 rounded-xl border border-orange-100/50 leading-relaxed text-gray-600 text-[13px] font-medium italic">
+                                    {formData.notes || "No additional observations provided."}
+                                </div>
+                            </section>
+                        </div>
                     </div>
                 </div>
             </DialogContent>

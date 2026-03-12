@@ -16,6 +16,8 @@ import getCroppedImg from "@/utils/cropImage";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import imageCompression from 'browser-image-compression';
 
+import ExifReader from 'exifreader';
+
 export default function PhotoCapture() {
   const params = useParams();
   const id = params?.id as string;
@@ -28,6 +30,7 @@ export default function PhotoCapture() {
 
   const [selectedType, setSelectedType] = useState("STOREFRONT");
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isExtractingLocation, setIsExtractingLocation] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
   // Cropper State
@@ -58,26 +61,6 @@ export default function PhotoCapture() {
     return myUploads.filter((photo: any) => photo.aoi_id === id && photo.status === 'REJECTED');
   }, [myUploads, id]);
 
-  // Live Location Tracking
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      toast.error("Geolocation not supported");
-      return;
-    }
-
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-      },
-      (err) => {
-        console.error("Location error:", err);
-      },
-      { enableHighAccuracy: true }
-    );
-
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, []);
-
   const photoTypes = [
     { label: "Storefront", value: "STOREFRONT" },
     { label: "Entrance", value: "ENTRANCE" },
@@ -89,21 +72,47 @@ export default function PhotoCapture() {
     { label: "Other", value: "OTHER" },
   ];
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !aoi) return;
 
-    if (!location) {
-      toast.error("Waiting for live location...");
-      return;
+    setIsExtractingLocation(true);
+    const toastId = toast.loading("Extracting GPS data from photo...");
+
+    try {
+      const tags = await ExifReader.load(file);
+
+      if (tags.GPSLatitude && tags.GPSLongitude) {
+        const lat = tags.GPSLatitude.description;
+        const lng = tags.GPSLongitude.description;
+
+        // ExifReader might return coordinates as string or number depending on format
+        const latitude = typeof lat === 'string' ? parseFloat(lat) : lat;
+        const longitude = typeof lng === 'string' ? parseFloat(lng) : lng;
+
+        if (!isNaN(latitude) && !isNaN(longitude)) {
+          setLocation({ lat: latitude, lng: longitude });
+          toast.success("GPS location extracted from photo", { id: toastId });
+        } else {
+          throw new Error("Invalid GPS coordinates in photo");
+        }
+      } else {
+        throw new Error("No GPS data found in this photo. Please ensure GPS is enabled on your camera.");
+      }
+
+      const reader = new FileReader();
+      reader.addEventListener("load", () => {
+        setCropImage(reader.result as string);
+        setIsCropping(true);
+        setIsExtractingLocation(false);
+      });
+      reader.readAsDataURL(file);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to extract location", { id: toastId });
+      setIsExtractingLocation(false);
+      setLocation(null);
     }
 
-    const reader = new FileReader();
-    reader.addEventListener("load", () => {
-      setCropImage(reader.result as string);
-      setIsCropping(true);
-    });
-    reader.readAsDataURL(file);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -144,15 +153,7 @@ export default function PhotoCapture() {
       const croppedBlob = await getCroppedImg(cropImage, scaledPixelCrop);
       if (!croppedBlob) throw new Error("Failed to crop image");
 
-      // Log original size
-      console.log(`Original cropped size: ${(croppedBlob.size / 1024 / 1024).toFixed(2)} MB`);
-
       // Compress the cropped image
-      // const options = {
-      //   maxSizeMB: 1,
-      //   maxWidthOrHeight: 1920,
-      //   useWebWorker: true,
-      // };
       const options = {
         maxSizeMB: 0.4,           // 400KB
         maxWidthOrHeight: 1280,   // enough resolution
@@ -162,9 +163,6 @@ export default function PhotoCapture() {
       };
 
       const compressedFile = await imageCompression(new File([croppedBlob], "temp.jpg", { type: "image/jpeg" }), options);
-
-      // Log compressed size
-      console.log(`Compressed size: ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
 
       const finalFile = new File([compressedFile], `photo_${Date.now()}.jpg`, { type: "image/jpeg" });
 
@@ -180,7 +178,8 @@ export default function PhotoCapture() {
       setLocalPhotos((prev) => [...prev, newPhoto]);
       setIsCropping(false);
       setCropImage(null);
-      toast.success(`${selectedType.replace("_", " ")} photo captured, cropped, and compressed`);
+      setLocation(null); // Clear location after staged
+      toast.success(`${selectedType.replace("_", " ")} photo captured and location saved from metadata`);
     } catch (e) {
       console.error(e);
       toast.error("Failed to process image");
@@ -295,14 +294,18 @@ export default function PhotoCapture() {
       {/* Content */}
       <div className="p-4 lg:p-6 max-w-4xl mx-auto">
         {/* Location Status Bar */}
-        <div className={`mb-4 p-2 rounded-lg text-xs flex items-center gap-2 ${location ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-yellow-50 text-yellow-700 border border-yellow-200'}`}>
+        <div className={`mb-4 p-2 rounded-lg text-xs flex items-center gap-2 ${location ? 'bg-green-50 text-green-700 border border-green-200' : (isExtractingLocation ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-yellow-50 text-yellow-700 border border-yellow-200')}`}>
           <MapPin className="w-4 h-4" />
           {location ? (
-            <span>Live Location: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}</span>
-          ) : (
+            <span>Photo GPS: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}</span>
+          ) : isExtractingLocation ? (
             <span className="flex items-center gap-1">
               <Loader2 className="w-3 h-3 animate-spin" />
-              Fetching live location...
+              Extracting location from photo...
+            </span>
+          ) : (
+            <span className="flex items-center gap-1">
+              Select or capture a photo to extract location metadata
             </span>
           )}
         </div>
@@ -321,6 +324,11 @@ export default function PhotoCapture() {
                       <Loader2 className="w-12 h-12 mx-auto mb-3 animate-spin opacity-50" />
                       <p className="text-sm">Uploading Photo...</p>
                     </div>
+                  ) : isExtractingLocation ? (
+                    <div className="relative z-10">
+                      <Loader2 className="w-12 h-12 mx-auto mb-3 animate-spin opacity-50" />
+                      <p className="text-sm">Extracting Metadata...</p>
+                    </div>
                   ) : (
                     <div className="relative z-10" onClick={handleCaptureClick}>
                       <Camera className="w-16 h-16 mx-auto mb-3 opacity-50" />
@@ -337,7 +345,7 @@ export default function PhotoCapture() {
                       size="lg"
                       className="rounded-full h-16 w-16"
                       onClick={handleCaptureClick}
-                      disabled={isUploading || !location}
+                      disabled={isUploading || isExtractingLocation}
                     >
                       <Camera className="w-6 h-6" />
                     </Button>
@@ -367,11 +375,11 @@ export default function PhotoCapture() {
                   </div>
 
                   <div className="flex gap-3">
-                    <Button onClick={handleCaptureClick} className="flex-1" disabled={isUploading || !location}>
+                    <Button onClick={handleCaptureClick} className="flex-1" disabled={isUploading || isExtractingLocation}>
                       <Camera className="w-4 h-4 mr-2" />
                       Capture Photo
                     </Button>
-                    <Button variant="outline" className="flex-1" onClick={handleCaptureClick} disabled={isUploading || !location}>
+                    <Button variant="outline" className="flex-1" onClick={handleCaptureClick} disabled={isUploading || isExtractingLocation}>
                       <Upload className="w-4 h-4 mr-2" />
                       Upload File
                     </Button>

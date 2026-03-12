@@ -100,7 +100,7 @@ export default function AOIDetail() {
                         variant="ghost"
                         size="sm"
                         className="w-fit -ml-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-all font-bold group"
-                        onClick={() => router.push('/editor/aoi')}
+                        onClick={() => router.back()}
                     >
                         <ArrowLeft className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1" />
                         Back to Workspace

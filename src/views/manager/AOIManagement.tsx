@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { Plus, MapPin, Pencil as Edit, Trash2, Users, Check, ChevronsUpDown, UserPlus, MoreHorizontal, X, CheckSquare, Search, SlidersHorizontal, FileText, Phone, Clock, Calendar, ArrowLeft, Camera } from "lucide-react";
+import { useState, useRef } from "react";
+import { Plus, MapPin, Pencil as Edit, Trash2, Users, Check, ChevronsUpDown, UserPlus, MoreHorizontal, X, CheckSquare, Search, SlidersHorizontal, FileText, Phone, Clock, Calendar, ArrowLeft, Camera, Upload } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,15 +23,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useManager } from "@/hooks/useManager";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
-import { XCircle, CheckCircle2, AlertCircle, Filter } from "lucide-react";
+import { XCircle, CheckCircle2, AlertCircle, Filter, Loader2 } from "lucide-react";
 import tj from "@mapbox/togeojson";
 import { Skeleton } from "@/components/ui/skeleton";
 // import { ActionTooltip } from "@/components/ui/action-tooltip";
 import POIManagement from "./POIManagement";
 
 export default function AOIManagement() {
-  const { useAllAois, createAoi, updateAoi, closeAoi, assignAoi, bulkAssignAoi } = useManager();
+  const { useAllAois, createAoi, bulkCreateAoi, updateAoi, closeAoi, assignAoi, bulkAssignAoi } = useManager();
   const { useAllUsers } = useAdmin();
+
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
   const { data: aoisData, isLoading: isLoadingAois } = useAllAois();
   const { data: usersData, isLoading: isLoadingUsers } = useAllUsers();
@@ -144,6 +146,37 @@ export default function AOIManagement() {
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleBulkCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith(".csv")) {
+      toast.error("Please upload a valid CSV file");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const toastId = toast.loading("Importing bulk AOIs...");
+
+    bulkCreateAoi.mutate(formData, {
+      onSuccess: (data: any) => {
+        if (data.errorCount > 0) {
+          toast.warning(`Imported ${data.successCount} AOIs with ${data.errorCount} errors`, { id: toastId });
+          console.error("Bulk import errors:", data.errors);
+        } else {
+          toast.success(`Successfully imported ${data.successCount} AOIs`, { id: toastId });
+        }
+        if (csvInputRef.current) csvInputRef.current.value = "";
+      },
+      onError: (err: any) => {
+        toast.error(err.response?.data?.message || "Bulk import failed", { id: toastId });
+        if (csvInputRef.current) csvInputRef.current.value = "";
+      },
+    });
   };
 
   const handleCreateAOI = () => {
@@ -320,6 +353,17 @@ export default function AOIManagement() {
           <p className="text-gray-600">Create and manage survey areas</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => csvInputRef.current?.click()} disabled={bulkCreateAoi.isPending}>
+            {bulkCreateAoi.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+            Bulk Import
+          </Button>
+          <input
+            type="file"
+            ref={csvInputRef}
+            className="hidden"
+            accept=".csv"
+            onChange={handleBulkCsvUpload}
+          />
           <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
@@ -772,7 +816,7 @@ export default function AOIManagement() {
                       </div>
                     </div>
                     <div className="flex flex-row items-center gap-2">
-                      {!(["ASSIGNED", "IN_PROGRESS", "COMPLETED"].includes(aoi.status)) && (
+                      {!(["ASSIGNED", "IN_PROGRESS", "COMPLETED", "SUBMITTED"].includes(aoi.status)) && (
                         <Button
                           variant="outline"
                           size="sm"

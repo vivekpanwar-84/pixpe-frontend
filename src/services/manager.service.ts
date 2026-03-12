@@ -22,6 +22,15 @@ export const managerService = {
         return response.data;
     },
 
+    bulkCreateAoi: async (formData: FormData) => {
+        const response = await api.post('/aoi/bulk', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    },
+
     updateAoi: async (id: string, data: any) => {
         const response = await api.patch(`/aoi/${id}`, data);
         return response.data;

@@ -105,6 +105,8 @@ export default function PhotoReview() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
+  const [potentialDuplicates, setPotentialDuplicates] = useState<any[]>([]);
+  const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false);
 
   const parseAiResponse = (text: string, aoi: any): ExtractedData => {
     const getValue = (label: string) => {
@@ -176,14 +178,53 @@ export default function PhotoReview() {
       const response = await api.post("/ai/analyze-image", { image_url: photo.photo_url });
       const rawText = response.data;
       setAiResponse(rawText);
-      setExtractedData(parseAiResponse(rawText, photo.aoi));
+      const parsedData = parseAiResponse(rawText, photo.aoi);
+      setExtractedData(parsedData);
       console.log(rawText);
       toast.success("AI Analysis Complete (with AOI Fallback)");
+
+      // Trigger duplicate check immediately after AI analysis
+      if (photo.aoi_id) {
+        checkDuplicates(parsedData, photo.aoi_id);
+      }
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to run AI analysis");
       console.error(err);
     } finally {
       setIsAiLoading(false);
+    }
+  };
+
+  // Debounced duplicate check on manual edits
+  useEffect(() => {
+    if (extractedData && photo?.aoi_id) {
+      const timer = setTimeout(() => {
+        checkDuplicates(extractedData, photo.aoi_id);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [extractedData?.business_name, extractedData?.phone, extractedData?.latitude, extractedData?.longitude, photo?.aoi_id]);
+
+  const checkDuplicates = async (data: ExtractedData, aoiId: string) => {
+    if (!data.business_name || data.business_name === "Not Provided") return;
+
+    setIsCheckingDuplicates(true);
+    try {
+      const lat = parseFloat(data.latitude);
+      const lng = parseFloat(data.longitude);
+
+      const response = await api.post("/forms/check-duplicate", {
+        aoi_id: aoiId,
+        business_name: data.business_name,
+        phone: data.phone !== "Not Provided" ? data.phone : undefined,
+        latitude: !isNaN(lat) ? lat : undefined,
+        longitude: !isNaN(lng) ? lng : undefined
+      });
+      setPotentialDuplicates(response.data);
+    } catch (err) {
+      console.error("Failed to check for duplicates:", err);
+    } finally {
+      setIsCheckingDuplicates(false);
     }
   };
 
@@ -379,275 +420,308 @@ export default function PhotoReview() {
                   )}
                 </Button>
               </div>
-
-              {extractedData && (
-                <div className="space-y-4">
-                  <div className="grid gap-3 p-4 bg-gray-50 rounded-lg border border-gray-100">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-[10px] uppercase text-gray-400">Business Name</Label>
-                        <Input
-                          value={extractedData.business_name}
-                          onChange={(e) => setExtractedData({ ...extractedData, business_name: e.target.value })}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px] uppercase text-gray-400">Phone</Label>
-                        <Input
-                          value={extractedData.phone}
-                          onChange={(e) => setExtractedData({ ...extractedData, phone: e.target.value })}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-[10px] uppercase text-gray-400">Category</Label>
-                        <Input
-                          value={extractedData.business_category}
-                          onChange={(e) => setExtractedData({ ...extractedData, business_category: e.target.value })}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px] uppercase text-gray-400">Sub Category</Label>
-                        <Input
-                          value={extractedData.business_sub_category}
-                          onChange={(e) => setExtractedData({ ...extractedData, business_sub_category: e.target.value })}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-[10px] uppercase text-gray-400">Alt Phone</Label>
-                        <Input
-                          value={extractedData.alternate_phone}
-                          onChange={(e) => setExtractedData({ ...extractedData, alternate_phone: e.target.value })}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px] uppercase text-gray-400">Email</Label>
-                        <Input
-                          value={extractedData.email}
-                          onChange={(e) => setExtractedData({ ...extractedData, email: e.target.value })}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">Website</Label>
-                      <Input
-                        value={extractedData.website}
-                        onChange={(e) => setExtractedData({ ...extractedData, website: e.target.value })}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-[10px] uppercase text-gray-400">Contact Person</Label>
-                        <Input
-                          value={extractedData.contact_person_name}
-                          onChange={(e) => setExtractedData({ ...extractedData, contact_person_name: e.target.value })}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px] uppercase text-gray-400">Designation</Label>
-                        <Input
-                          value={extractedData.contact_person_designation}
-                          onChange={(e) => setExtractedData({ ...extractedData, contact_person_designation: e.target.value })}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-[10px] uppercase text-gray-400">Latitude</Label>
-                        <Input
-                          value={extractedData.latitude}
-                          onChange={(e) => setExtractedData({ ...extractedData, latitude: e.target.value })}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px] uppercase text-gray-400">Longitude</Label>
-                        <Input
-                          value={extractedData.longitude}
-                          onChange={(e) => setExtractedData({ ...extractedData, longitude: e.target.value })}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">Address Line 1</Label>
-                      <Input
-                        value={extractedData.address_line1}
-                        onChange={(e) => setExtractedData({ ...extractedData, address_line1: e.target.value })}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">Address Line 2</Label>
-                      <Input
-                        value={extractedData.address_line2}
-                        onChange={(e) => setExtractedData({ ...extractedData, address_line2: e.target.value })}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-[10px] uppercase text-gray-400">Landmark</Label>
-                        <Input
-                          value={extractedData.landmark}
-                          onChange={(e) => setExtractedData({ ...extractedData, landmark: e.target.value })}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px] uppercase text-gray-400">City</Label>
-                        <Input
-                          value={extractedData.city}
-                          onChange={(e) => setExtractedData({ ...extractedData, city: e.target.value })}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="space-y-1">
-                        <Label className="text-[10px] uppercase text-gray-400">State</Label>
-                        <Input
-                          value={extractedData.state}
-                          onChange={(e) => setExtractedData({ ...extractedData, state: e.target.value })}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px] uppercase text-gray-400">Pin Code</Label>
-                        <Input
-                          value={extractedData.pin_code}
-                          onChange={(e) => setExtractedData({ ...extractedData, pin_code: e.target.value })}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px] uppercase text-gray-400">Country</Label>
-                        <Input
-                          value={extractedData.country}
-                          onChange={(e) => setExtractedData({ ...extractedData, country: e.target.value })}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      className="flex-1 bg-green-600 hover:bg-green-700 h-9"
-                      onClick={() => {
-                        submitForm.mutate({
-                          aoi_id: photo.aoi_id,
-                          form_type: "BUSINESS_DETAILS",
-                          business_name: extractedData.business_name || "Not Provided",
-                          business_category: extractedData.business_category,
-                          business_sub_category: extractedData.business_sub_category,
-                          phone: extractedData.phone,
-                          alternate_phone: extractedData.alternate_phone,
-                          email: extractedData.email,
-                          website: extractedData.website,
-                          contact_person_name: extractedData.contact_person_name,
-                          contact_person_designation: extractedData.contact_person_designation,
-                          latitude: parseFloat(extractedData.latitude) || 0,
-                          longitude: parseFloat(extractedData.longitude) || 0,
-                          address_line1: extractedData.address_line1 || "Not Provided",
-                          address_line2: extractedData.address_line2,
-                          landmark: extractedData.landmark,
-                          city: extractedData.city || "Not Provided",
-                          state: extractedData.state || "Not Provided",
-                          pin_code: extractedData.pin_code || "Not Provided",
-                          country: extractedData.country,
-                          linked_photo_id: id
-                        }, {
-                          onSuccess: () => {
-                            toast.success("Details saved successfully");
-                            window.location.reload();
-                          },
-                          onError: (err: any) => {
-                            toast.error(err.response?.data?.message || "Failed to save details");
-                          }
-                        });
-                      }}
-                      disabled={submitForm.isPending}
-                    >
-                      <Save className="w-4 h-4 mr-2" />
-                      {submitForm.isPending ? "Saving..." : "Save Details"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setExtractedData(null);
-                        setAiResponse(null);
-                      }}
-                      className="px-3 h-9"
-                    >
-                      <RotateCw className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
             </div>
 
-            <div className="border-t pt-4">
-              <h3 className="font-semibold mb-3">Review Decision</h3>
-              <RadioGroup value={decision} onValueChange={setDecision}>
+            {potentialDuplicates.length > 0 && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="flex items-start gap-3">
+                  <div className="bg-amber-100 p-2 rounded-lg">
+                    <AlertTriangle className="w-4 h-4 text-amber-600" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-amber-900 border-none">Potential Duplicate Found</p>
+                    <p className="text-[11px] text-amber-700 leading-relaxed">
+                      Another survey with similar details already exists in this area.
+                    </p>
+                  </div>
+                </div>
                 <div className="space-y-2">
-                  <div className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
-                    <RadioGroupItem value="reject" id="reject" />
-                    <Label htmlFor="reject" className="flex items-center gap-2 cursor-pointer flex-1">
-                      <XCircle className="w-4 h-4 text-red-600" />
-                      Reject (Request Re-upload)
-                    </Label>
+                  {potentialDuplicates.map((dup) => (
+                    <div key={dup.id} className="bg-white/80 backdrop-blur-sm p-2.5 rounded-lg border border-amber-100 flex items-center justify-between group">
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-gray-900 truncate">{dup.business_name}</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">ID: #{dup.id.slice(0, 8)}</p>
+                      </div>
+                      <Badge variant="outline" className="text-[9px] bg-amber-50 text-amber-600 border-amber-100 shrink-0">
+                        Matching
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {extractedData && (
+              <div className="space-y-4">
+                <div className="grid gap-3 p-4 bg-gray-50 rounded-lg border border-gray-100">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Business Name</Label>
+                      <Input
+                        value={extractedData.business_name}
+                        onChange={(e) => setExtractedData({ ...extractedData, business_name: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Phone</Label>
+                      <Input
+                        value={extractedData.phone}
+                        onChange={(e) => setExtractedData({ ...extractedData, phone: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Category</Label>
+                      <Input
+                        value={extractedData.business_category}
+                        onChange={(e) => setExtractedData({ ...extractedData, business_category: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Sub Category</Label>
+                      <Input
+                        value={extractedData.business_sub_category}
+                        onChange={(e) => setExtractedData({ ...extractedData, business_sub_category: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Alt Phone</Label>
+                      <Input
+                        value={extractedData.alternate_phone}
+                        onChange={(e) => setExtractedData({ ...extractedData, alternate_phone: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Email</Label>
+                      <Input
+                        value={extractedData.email}
+                        onChange={(e) => setExtractedData({ ...extractedData, email: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase text-gray-400">Website</Label>
+                    <Input
+                      value={extractedData.website}
+                      onChange={(e) => setExtractedData({ ...extractedData, website: e.target.value })}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Contact Person</Label>
+                      <Input
+                        value={extractedData.contact_person_name}
+                        onChange={(e) => setExtractedData({ ...extractedData, contact_person_name: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Designation</Label>
+                      <Input
+                        value={extractedData.contact_person_designation}
+                        onChange={(e) => setExtractedData({ ...extractedData, contact_person_designation: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Latitude</Label>
+                      <Input
+                        value={extractedData.latitude}
+                        onChange={(e) => setExtractedData({ ...extractedData, latitude: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Longitude</Label>
+                      <Input
+                        value={extractedData.longitude}
+                        onChange={(e) => setExtractedData({ ...extractedData, longitude: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase text-gray-400">Address Line 1</Label>
+                    <Input
+                      value={extractedData.address_line1}
+                      onChange={(e) => setExtractedData({ ...extractedData, address_line1: e.target.value })}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase text-gray-400">Address Line 2</Label>
+                    <Input
+                      value={extractedData.address_line2}
+                      onChange={(e) => setExtractedData({ ...extractedData, address_line2: e.target.value })}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Landmark</Label>
+                      <Input
+                        value={extractedData.landmark}
+                        onChange={(e) => setExtractedData({ ...extractedData, landmark: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">City</Label>
+                      <Input
+                        value={extractedData.city}
+                        onChange={(e) => setExtractedData({ ...extractedData, city: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">State</Label>
+                      <Input
+                        value={extractedData.state}
+                        onChange={(e) => setExtractedData({ ...extractedData, state: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Pin Code</Label>
+                      <Input
+                        value={extractedData.pin_code}
+                        onChange={(e) => setExtractedData({ ...extractedData, pin_code: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-gray-400">Country</Label>
+                      <Input
+                        value={extractedData.country}
+                        onChange={(e) => setExtractedData({ ...extractedData, country: e.target.value })}
+                        className="h-8 text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
-              </RadioGroup>
-            </div>
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1 bg-green-600 hover:bg-green-700 h-9"
+                    onClick={() => {
+                      if (potentialDuplicates.length > 0) {
+                        toast.error("Potential duplicate detected! Please check existing entries before saving.");
+                        return;
+                      }
+                      submitForm.mutate({
+                        aoi_id: photo.aoi_id,
+                        form_type: "BUSINESS_DETAILS",
+                        business_name: extractedData.business_name || "Not Provided",
+                        business_category: extractedData.business_category,
+                        business_sub_category: extractedData.business_sub_category,
+                        phone: extractedData.phone,
+                        alternate_phone: extractedData.alternate_phone,
+                        email: extractedData.email,
+                        website: extractedData.website,
+                        contact_person_name: extractedData.contact_person_name,
+                        contact_person_designation: extractedData.contact_person_designation,
+                        latitude: Number.isFinite(parseFloat(extractedData.latitude)) ? parseFloat(extractedData.latitude) : 0,
+                        longitude: Number.isFinite(parseFloat(extractedData.longitude)) ? parseFloat(extractedData.longitude) : 0,
+                        address_line1: extractedData.address_line1 || "Not Provided",
+                        address_line2: extractedData.address_line2,
+                        landmark: extractedData.landmark,
+                        city: extractedData.city || "Not Provided",
+                        state: extractedData.state || "Not Provided",
+                        pin_code: extractedData.pin_code || "Not Provided",
+                        country: extractedData.country,
+                        linked_photo_id: id
+                      }, {
+                        onSuccess: () => {
+                          toast.success("Details saved successfully");
+                          window.location.reload();
+                        },
+                        onError: (err: any) => {
+                          toast.error(err.response?.data?.message || "Failed to save details");
+                        }
+                      });
+                    }}
+                    disabled={submitForm.isPending || isCheckingDuplicates}
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {submitForm.isPending ? "Saving..." : isCheckingDuplicates ? "Checking..." : "Save Details"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setExtractedData(null);
+                      setAiResponse(null);
+                    }}
+                    className="px-3 h-9"
+                  >
+                    <RotateCw className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
 
-            <div>
-              <Label htmlFor="feedback">Feedback / Comments</Label>
-              <Textarea
-                id="feedback"
-                placeholder="Provide feedback to the surveyor..."
-                rows={4}
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                className="mt-2"
-              />
-            </div>
+          <div className="border-t pt-4">
+            <h3 className="font-semibold mb-3">Review Decision</h3>
+            <RadioGroup value={decision} onValueChange={setDecision}>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                  <RadioGroupItem value="reject" id="reject" />
+                  <Label htmlFor="reject" className="flex items-center gap-2 cursor-pointer flex-1">
+                    <XCircle className="w-4 h-4 text-red-600" />
+                    Reject (Request Re-upload)
+                  </Label>
+                </div>
+              </div>
+            </RadioGroup>
+          </div>
 
-            <div className="space-y-2 pt-4">
-              {decision === "reject" && (
-                <Button
-                  onClick={handleReject}
-                  className="w-full"
-                  variant="destructive"
-                  disabled={requestReupload.isPending}
-                >
-                  <XCircle className="w-4 h-4 mr-2" />
-                  {requestReupload.isPending ? "Sending Request..." : "Reject & Request Re-upload"}
-                </Button>
-              )}
-            </div>
+          <div>
+            <Label htmlFor="feedback">Feedback / Comments</Label>
+            <Textarea
+              id="feedback"
+              placeholder="Provide feedback to the surveyor..."
+              rows={4}
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              className="mt-2"
+            />
+          </div>
+
+          <div className="space-y-2 pt-4">
+            {decision === "reject" && (
+              <Button
+                onClick={handleReject}
+                className="w-full"
+                variant="destructive"
+                disabled={requestReupload.isPending}
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                {requestReupload.isPending ? "Sending Request..." : "Reject & Request Re-upload"}
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -731,6 +805,29 @@ export default function PhotoReview() {
                 </Button>
               </div>
 
+              {potentialDuplicates.length > 0 && (
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-amber-900">Potential Duplicate Found</p>
+                      <p className="text-[10px] text-amber-700">Another survey already exists in this area.</p>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    {potentialDuplicates.map((dup) => (
+                      <div key={dup.id} className="bg-white/80 p-2 rounded-lg border border-amber-100 flex items-center justify-between">
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-bold text-gray-900 truncate">{dup.business_name}</p>
+                          <p className="text-[9px] text-gray-400">ID: #{dup.id.slice(0, 8)}</p>
+                        </div>
+                        <Badge variant="outline" className="text-[8px] h-4 bg-amber-50 text-amber-600 border-amber-100">Duplicate</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {extractedData && (
                 <div className="space-y-4">
                   <div className="grid gap-3 p-4 bg-gray-50 rounded-lg border border-gray-100">
@@ -739,7 +836,7 @@ export default function PhotoReview() {
                         <Label className="text-[10px] uppercase text-gray-400">Business Name</Label>
                         <Input
                           value={extractedData.business_name}
-                          onChange={(e) => setExtractedData({ ...extractedData, business_name: e.target.value })}
+                          onChange={(e) => setExtractedData(prev => prev ? { ...prev, business_name: e.target.value } : null)}
                           className="h-8 text-sm"
                         />
                       </div>
@@ -747,7 +844,7 @@ export default function PhotoReview() {
                         <Label className="text-[10px] uppercase text-gray-400">Phone</Label>
                         <Input
                           value={extractedData.phone}
-                          onChange={(e) => setExtractedData({ ...extractedData, phone: e.target.value })}
+                          onChange={(e) => setExtractedData(prev => prev ? { ...prev, phone: e.target.value } : null)}
                           className="h-8 text-sm"
                         />
                       </div>
@@ -758,7 +855,7 @@ export default function PhotoReview() {
                         <Label className="text-[10px] uppercase text-gray-400">Category</Label>
                         <Input
                           value={extractedData.business_category}
-                          onChange={(e) => setExtractedData({ ...extractedData, business_category: e.target.value })}
+                          onChange={(e) => setExtractedData(prev => prev ? { ...prev, business_category: e.target.value } : null)}
                           className="h-8 text-sm"
                         />
                       </div>
@@ -766,33 +863,36 @@ export default function PhotoReview() {
                         <Label className="text-[10px] uppercase text-gray-400">Sub Category</Label>
                         <Input
                           value={extractedData.business_sub_category}
-                          onChange={(e) => setExtractedData({ ...extractedData, business_sub_category: e.target.value })}
+                          onChange={(e) => setExtractedData(prev => prev ? { ...prev, business_sub_category: e.target.value } : null)}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Alt Phone</Label>
+                        <Input
+                          value={extractedData.alternate_phone}
+                          onChange={(e) => setExtractedData(prev => prev ? { ...prev, alternate_phone: e.target.value } : null)}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-gray-400">Email</Label>
+                        <Input
+                          value={extractedData.email}
+                          onChange={(e) => setExtractedData(prev => prev ? { ...prev, email: e.target.value } : null)}
                           className="h-8 text-sm"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">Alt Phone</Label>
-                      <Input
-                        value={extractedData.alternate_phone}
-                        onChange={(e) => setExtractedData({ ...extractedData, alternate_phone: e.target.value })}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-gray-400">Email</Label>
-                      <Input
-                        value={extractedData.email}
-                        onChange={(e) => setExtractedData({ ...extractedData, email: e.target.value })}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
                       <Label className="text-[10px] uppercase text-gray-400">Website</Label>
                       <Input
                         value={extractedData.website}
-                        onChange={(e) => setExtractedData({ ...extractedData, website: e.target.value })}
+                        onChange={(e) => setExtractedData(prev => prev ? { ...prev, website: e.target.value } : null)}
                         className="h-8 text-sm"
                       />
                     </div>
@@ -802,7 +902,7 @@ export default function PhotoReview() {
                         <Label className="text-[10px] uppercase text-gray-400">Contact Person</Label>
                         <Input
                           value={extractedData.contact_person_name}
-                          onChange={(e) => setExtractedData({ ...extractedData, contact_person_name: e.target.value })}
+                          onChange={(e) => setExtractedData(prev => prev ? { ...prev, contact_person_name: e.target.value } : null)}
                           className="h-8 text-sm"
                         />
                       </div>
@@ -810,7 +910,7 @@ export default function PhotoReview() {
                         <Label className="text-[10px] uppercase text-gray-400">Designation</Label>
                         <Input
                           value={extractedData.contact_person_designation}
-                          onChange={(e) => setExtractedData({ ...extractedData, contact_person_designation: e.target.value })}
+                          onChange={(e) => setExtractedData(prev => prev ? { ...prev, contact_person_designation: e.target.value } : null)}
                           className="h-8 text-sm"
                         />
                       </div>
@@ -821,7 +921,7 @@ export default function PhotoReview() {
                         <Label className="text-[10px] uppercase text-gray-400">Latitude</Label>
                         <Input
                           value={extractedData.latitude}
-                          onChange={(e) => setExtractedData({ ...extractedData, latitude: e.target.value })}
+                          onChange={(e) => setExtractedData(prev => prev ? { ...prev, latitude: e.target.value } : null)}
                           className="h-8 text-sm"
                         />
                       </div>
@@ -829,7 +929,7 @@ export default function PhotoReview() {
                         <Label className="text-[10px] uppercase text-gray-400">Longitude</Label>
                         <Input
                           value={extractedData.longitude}
-                          onChange={(e) => setExtractedData({ ...extractedData, longitude: e.target.value })}
+                          onChange={(e) => setExtractedData(prev => prev ? { ...prev, longitude: e.target.value } : null)}
                           className="h-8 text-sm"
                         />
                       </div>
@@ -839,7 +939,7 @@ export default function PhotoReview() {
                       <Label className="text-[10px] uppercase text-gray-400">Address Line 1</Label>
                       <Input
                         value={extractedData.address_line1}
-                        onChange={(e) => setExtractedData({ ...extractedData, address_line1: e.target.value })}
+                        onChange={(e) => setExtractedData(prev => prev ? { ...prev, address_line1: e.target.value } : null)}
                         className="h-8 text-sm"
                       />
                     </div>
@@ -848,7 +948,7 @@ export default function PhotoReview() {
                       <Label className="text-[10px] uppercase text-gray-400">Address Line 2</Label>
                       <Input
                         value={extractedData.address_line2}
-                        onChange={(e) => setExtractedData({ ...extractedData, address_line2: e.target.value })}
+                        onChange={(e) => setExtractedData(prev => prev ? { ...prev, address_line2: e.target.value } : null)}
                         className="h-8 text-sm"
                       />
                     </div>
@@ -858,7 +958,7 @@ export default function PhotoReview() {
                         <Label className="text-[10px] uppercase text-gray-400">Landmark</Label>
                         <Input
                           value={extractedData.landmark}
-                          onChange={(e) => setExtractedData({ ...extractedData, landmark: e.target.value })}
+                          onChange={(e) => setExtractedData(prev => prev ? { ...prev, landmark: e.target.value } : null)}
                           className="h-8 text-sm"
                         />
                       </div>
@@ -866,7 +966,7 @@ export default function PhotoReview() {
                         <Label className="text-[10px] uppercase text-gray-400">City</Label>
                         <Input
                           value={extractedData.city}
-                          onChange={(e) => setExtractedData({ ...extractedData, city: e.target.value })}
+                          onChange={(e) => setExtractedData(prev => prev ? { ...prev, city: e.target.value } : null)}
                           className="h-8 text-sm"
                         />
                       </div>
@@ -877,7 +977,7 @@ export default function PhotoReview() {
                         <Label className="text-[10px] uppercase text-gray-400">State</Label>
                         <Input
                           value={extractedData.state}
-                          onChange={(e) => setExtractedData({ ...extractedData, state: e.target.value })}
+                          onChange={(e) => setExtractedData(prev => prev ? { ...prev, state: e.target.value } : null)}
                           className="h-8 text-sm"
                         />
                       </div>
@@ -885,7 +985,7 @@ export default function PhotoReview() {
                         <Label className="text-[10px] uppercase text-gray-400">Pin Code</Label>
                         <Input
                           value={extractedData.pin_code}
-                          onChange={(e) => setExtractedData({ ...extractedData, pin_code: e.target.value })}
+                          onChange={(e) => setExtractedData(prev => prev ? { ...prev, pin_code: e.target.value } : null)}
                           className="h-8 text-sm"
                         />
                       </div>
@@ -894,7 +994,7 @@ export default function PhotoReview() {
                       <Label className="text-[10px] uppercase text-gray-400">Country</Label>
                       <Input
                         value={extractedData.country}
-                        onChange={(e) => setExtractedData({ ...extractedData, country: e.target.value })}
+                        onChange={(e) => setExtractedData(prev => prev ? { ...prev, country: e.target.value } : null)}
                         className="h-8 text-sm"
                       />
                     </div>
@@ -903,6 +1003,11 @@ export default function PhotoReview() {
                     <Button
                       className="flex-1 bg-green-600 hover:bg-green-700 h-9"
                       onClick={() => {
+                        if (!extractedData) return;
+                        if (potentialDuplicates.length > 0) {
+                          toast.error("Potential duplicate detected! Please check existing entries before saving.");
+                          return;
+                        }
                         submitForm.mutate({
                           aoi_id: photo.aoi_id,
                           form_type: "BUSINESS_DETAILS",
@@ -915,8 +1020,8 @@ export default function PhotoReview() {
                           website: extractedData.website,
                           contact_person_name: extractedData.contact_person_name,
                           contact_person_designation: extractedData.contact_person_designation,
-                          latitude: parseFloat(extractedData.latitude) || 0,
-                          longitude: parseFloat(extractedData.longitude) || 0,
+                          latitude: Number.isFinite(parseFloat(extractedData.latitude)) ? parseFloat(extractedData.latitude) : 0,
+                          longitude: Number.isFinite(parseFloat(extractedData.longitude)) ? parseFloat(extractedData.longitude) : 0,
                           address_line1: extractedData.address_line1 || "Not Provided",
                           address_line2: extractedData.address_line2,
                           landmark: extractedData.landmark,
@@ -935,10 +1040,10 @@ export default function PhotoReview() {
                           }
                         });
                       }}
-                      disabled={submitForm.isPending}
+                      disabled={submitForm.isPending || isCheckingDuplicates}
                     >
                       <Save className="w-4 h-4 mr-2" />
-                      {submitForm.isPending ? "Saving..." : "Save Details"}
+                      {submitForm.isPending ? "Saving..." : isCheckingDuplicates ? "Checking..." : "Save Details"}
                     </Button>
                     <Button
                       variant="outline"
@@ -958,7 +1063,7 @@ export default function PhotoReview() {
           </CardContent>
         </Card>
 
-        {/* Review Form */}
+        {/* Review Form (Mobile) */}
         <Card>
           <CardHeader>
             <CardTitle>Review Decision</CardTitle>
@@ -1024,7 +1129,6 @@ export default function PhotoReview() {
           </CardContent>
         </Card>
       </div>
-
     </div>
   );
 }

@@ -592,7 +592,7 @@ export default function POIManagement({ aoiId }: POIManagementProps) {
             </Dialog>
             {/* Form Detail Modal */}
             <Dialog open={isFormDetailOpen} onOpenChange={setIsFormDetailOpen}>
-                <DialogContent className="sm:max-w-[800px] p-0 overflow-hidden border-none shadow-2xl">
+                <DialogContent className="sm:max-w-[1000px] w-[95vw] p-0 overflow-hidden border-none shadow-2xl md:h-[80vh] flex flex-col">
                     {selectedForm ? (() => {
                         // Handle potential nesting: photo.form.form (PoiForm relation) vs flattened data
                         const displayForm = selectedForm.form || selectedForm;
@@ -616,15 +616,16 @@ export default function POIManagement({ aoiId }: POIManagementProps) {
                         const website = displayForm.website || formData.website;
 
                         return (
-                            <div className="flex flex-col md:flex-row h-[85vh] md:h-auto">
+                            <div className="flex flex-col md:flex-row h-full overflow-hidden">
                                 {/* Photo Section */}
-                                <div className="md:w-1/2 bg-gray-100 relative min-h-[400px] md:min-h-0 flex items-center justify-center border-r border-gray-100">
+                                <div className="md:w-3/5 bg-slate-900 relative min-h-[300px] md:min-h-0 flex items-center justify-center">
                                     {selectedPhoto?.photo_url ? (
                                         <div className="absolute inset-0 p-4">
                                             <div className="relative w-full h-full rounded-xl overflow-hidden shadow-sm group">
                                                 <ImageWithLoader
                                                     src={selectedPhoto.photo_url}
                                                     alt="POI Business"
+                                                    objectFit="contain"
                                                 />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none z-10" />
                                                 <div className="absolute bottom-4 left-4 right-4 text-white text-left z-20">
@@ -647,7 +648,7 @@ export default function POIManagement({ aoiId }: POIManagementProps) {
                                 </div>
 
                                 {/* Details Section */}
-                                <div className="md:w-1/2 flex flex-col bg-white overflow-hidden">
+                                <div className="md:w-2/5 flex flex-col bg-white overflow-hidden border-l border-gray-100">
                                     <div className="p-6 bg-white border-b border-gray-50 text-left">
                                         <div className="flex items-center justify-between mb-3">
                                             <Badge variant="outline" className="border-blue-100 bg-blue-50 text-blue-600 text-[10px] uppercase font-bold px-2 py-0.5">
