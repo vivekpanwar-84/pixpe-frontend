@@ -53,7 +53,8 @@ export default function RewardsRequests() {
     const fetchRequests = async () => {
         try {
             const data = await rewardService.getAllRewardRequests("PENDING");
-            setRequests(data);
+            const safeData = Array.isArray(data) ? data : (data?.data || []);
+            setRequests(safeData);
         } catch (error) {
             console.error("Error fetching reward requests:", error);
             toast.error("Failed to load reward requests");

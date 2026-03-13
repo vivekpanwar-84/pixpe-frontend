@@ -1,8 +1,10 @@
 "use client";
-import { ImageIcon, ChevronRight, User, MapPin, Clock } from "lucide-react";
+import { useState } from "react";
+import { ImageIcon, ChevronRight, User, MapPin, Clock, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useEditor } from "@/hooks/useEditor";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
@@ -10,15 +12,31 @@ import { cn } from "@/components/ui/utils";
 import { ImageWithLoader } from "@/components/ImageWithLoader";
 
 export default function AssignedPhotos() {
+    const [searchQuery, setSearchQuery] = useState("");
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(20);
+
     const { useAssignedPhotos } = useEditor();
-    const { data: photos, isLoading } = useAssignedPhotos();
+    const { data: photosPaginated, isLoading } = useAssignedPhotos(page, limit, searchQuery);
+
+    const photos = photosPaginated?.data || photosPaginated || [];
+    const totalPhotos = photosPaginated?.total || 0;
 
     return (
         <div className="p-4 lg:p-6 space-y-6 max-w-7xl mx-auto">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl lg:text-3xl font-bold mb-1">Assigned Photos</h1>
                     <p className="text-gray-600">Review and verify photos assigned to you</p>
+                </div>
+                <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input
+                        placeholder="Search photos..."
+                        className="pl-9 h-10 bg-white border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 shadow-sm"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                 </div>
             </div>
 
@@ -103,6 +121,36 @@ export default function AssignedPhotos() {
                     ))
                 )}
             </div>
+
+            {/* Pagination Controls */}
+            {totalPhotos > limit && (
+                <div className="flex items-center justify-between mt-6 max-w-5xl mx-auto">
+                    <p className="text-sm text-gray-500">
+                        Showing {(page - 1) * limit + 1} to {Math.min(page * limit, totalPhotos)} of {totalPhotos} photos
+                    </p>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={page === 1}
+                            onClick={() => setPage(p => p - 1)}
+                        >
+                            Previous
+                        </Button>
+                        <div className="text-sm font-medium px-2">
+                            Page {page} of {Math.ceil(totalPhotos / limit)}
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={page >= Math.ceil(totalPhotos / limit)}
+                            onClick={() => setPage(p => p + 1)}
+                        >
+                            Next
+                        </Button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -179,8 +179,10 @@ export default function FormReview() {
     const [selectedFormIds, setSelectedFormIds] = useState<Set<string>>(new Set());
 
     const filteredFormsList = useMemo(() => {
-        if (!allForms) return [];
-        return allForms.filter((form: any) => {
+        const safeForms = Array.isArray(allForms) ? allForms : (allForms?.data || []);
+        if (!safeForms.length) return [];
+        
+        return safeForms.filter((form: any) => {
             // Search filter
             const businessName = (form.form?.business_name || "").toLowerCase();
             const aoiName = (form.aoi?.aoi_name || "").toLowerCase();
@@ -390,7 +392,7 @@ export default function FormReview() {
                             onChange={(e) => setAoiFilter(e.target.value)}
                         >
                             <option value="ALL">All AOIs</option>
-                            {assignedAois?.map((aoi: any) => (
+                            {(Array.isArray(assignedAois) ? assignedAois : (assignedAois?.data || []))?.map((aoi: any) => (
                                 <option key={aoi.id} value={aoi.id}>
                                     {aoi.aoi_name || aoi.aoi_code}
                                 </option>

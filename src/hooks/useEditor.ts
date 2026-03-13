@@ -4,10 +4,10 @@ import { editorService } from '@/services/editor.service';
 export const useEditor = () => {
     const queryClient = useQueryClient();
 
-    const useAssignedPhotos = () => {
+    const useAssignedPhotos = (page: number = 1, limit: number = 20, search: string = '') => {
         return useQuery({
-            queryKey: ['photos', 'assigned'],
-            queryFn: editorService.getAssignedPhotos,
+            queryKey: ['photos', 'assigned', { page, limit, search }],
+            queryFn: () => editorService.getAssignedPhotos(page, limit, search),
         });
     };
 
@@ -44,10 +44,10 @@ export const useEditor = () => {
         },
     });
 
-    const useAssignedAois = (hasForms?: boolean) => {
+    const useAssignedAois = (hasForms?: boolean, page: number = 1, limit: number = 20, search: string = '') => {
         return useQuery({
-            queryKey: ['aoi', 'assigned', { hasForms }],
-            queryFn: () => editorService.getAssignedAois(hasForms),
+            queryKey: ['aoi', 'assigned', { hasForms, page, limit, search }],
+            queryFn: () => editorService.getAssignedAois(hasForms, page, limit, search),
         });
     };
 
@@ -67,10 +67,10 @@ export const useEditor = () => {
         });
     };
 
-    const useForms = (aoiId?: string, submittedBy?: string, photoId?: string) => {
+    const useForms = (aoiId?: string, submittedBy?: string, photoId?: string, page: number = 1, limit: number = 20, search: string = '') => {
         return useQuery({
-            queryKey: ['forms', aoiId, submittedBy, photoId],
-            queryFn: () => editorService.getForms(aoiId, submittedBy, photoId),
+            queryKey: ['forms', aoiId, submittedBy, photoId, { page, limit, search }],
+            queryFn: () => editorService.getForms(aoiId, submittedBy, photoId, page, limit, search),
         });
     };
 

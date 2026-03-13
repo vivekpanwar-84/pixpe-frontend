@@ -33,7 +33,8 @@ export default function FormsManagement() {
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
 
-    const filteredForms = forms?.filter((form: any) =>
+    const safeForms = Array.isArray(forms) ? forms : (forms?.data || []);
+    const filteredForms = safeForms.filter((form: any) =>
         form.form_data?.business_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         form.submitted_by?.name?.toLowerCase().includes(searchQuery.toLowerCase())
     );

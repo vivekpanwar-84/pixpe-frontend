@@ -1,8 +1,8 @@
 import api from './api';
 
 export const editorService = {
-    getAssignedAois: async (hasForms?: boolean) => {
-        const response = await api.get('/aoi/assigned', { params: { hasForms } });
+    getAssignedAois: async (hasForms?: boolean, page: number = 1, limit: number = 20, search?: string) => {
+        const response = await api.get('/aoi/assigned', { params: { hasForms, page, limit, search } });
         return response.data;
     },
 
@@ -15,8 +15,8 @@ export const editorService = {
         return response.data;
     },
 
-    getAssignedPhotos: async () => {
-        const response = await api.get('/photos/assigned');
+    getAssignedPhotos: async (page: number = 1, limit: number = 20, search?: string) => {
+        const response = await api.get('/photos/assigned', { params: { page, limit, search } });
         return response.data;
     },
 
@@ -38,12 +38,15 @@ export const editorService = {
         const response = await api.patch(`/photos/${id}/request-reupload`, { reason });
         return response.data;
     },
-    getForms: async (aoiId?: string, submittedBy?: string, photoId?: string) => {
+    getForms: async (aoiId?: string, submittedBy?: string, photoId?: string, page: number = 1, limit: number = 20, search?: string) => {
         const response = await api.get('/forms', {
             params: {
                 aoi_id: aoiId,
                 submitted_by: submittedBy,
-                photo_id: photoId
+                photo_id: photoId,
+                page,
+                limit,
+                search
             }
         });
         return response.data;

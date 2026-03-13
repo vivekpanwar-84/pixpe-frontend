@@ -4,10 +4,10 @@ import { managerService } from '@/services/manager.service';
 export const useManager = () => {
     const queryClient = useQueryClient();
 
-    const useAllAois = () => {
+    const useAllAois = (page: number = 1, limit: number = 20, search: string = '') => {
         return useQuery({
-            queryKey: ['aois', 'all'],
-            queryFn: managerService.getAllAois,
+            queryKey: ['aois', 'all', { page, limit, search }],
+            queryFn: () => managerService.getAllAois(page, limit, search),
         });
     };
 
@@ -56,10 +56,10 @@ export const useManager = () => {
         },
     });
 
-    const useAllPhotos = (filters?: { status?: string, aoiId?: string }) => {
+    const useAllPhotos = (filters?: { status?: string, aoiId?: string, page?: number, limit?: number, search?: string }) => {
         return useQuery({
             queryKey: ['photos', 'all', filters],
-            queryFn: () => managerService.getAllPhotos(filters?.status, filters?.aoiId),
+            queryFn: () => managerService.getAllPhotos(filters?.status, filters?.aoiId, filters?.page || 1, filters?.limit || 20, filters?.search),
         });
     };
 
@@ -79,10 +79,10 @@ export const useManager = () => {
         },
     });
 
-    const useAllForms = (filters?: { status?: string, photoId?: string, aoiId?: string }) => {
+    const useAllForms = (filters?: { status?: string, photoId?: string, aoiId?: string, page?: number, limit?: number, search?: string }) => {
         return useQuery({
             queryKey: ['forms', 'all', filters],
-            queryFn: () => managerService.getAllForms(filters?.status, filters?.photoId, filters?.aoiId),
+            queryFn: () => managerService.getAllForms(filters?.status, filters?.photoId, filters?.aoiId, filters?.page || 1, filters?.limit || 20, filters?.search),
         });
     };
 

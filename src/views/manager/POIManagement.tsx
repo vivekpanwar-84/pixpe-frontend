@@ -60,17 +60,21 @@ interface POIManagementProps {
 }
 
 export default function POIManagement({ aoiId }: POIManagementProps) {
+    const [searchQuery, setSearchQuery] = useState("");
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(20);
+
     const { useAllPhotos, assignPhoto, updatePhotoStatus } = useManager();
     const { useAllUsers } = useAdmin();
-    const { data: photos, isLoading: photosLoading } = useAllPhotos({ aoiId });
-    const { data: editors } = useAllUsers("editor");
+    const { data: photosPaginated, isLoading: photosLoading } = useAllPhotos({ aoiId, page, limit, search: searchQuery });
+    const { data: usersPaginated } = useAllUsers("editor");
+    const editors = usersPaginated?.data || usersPaginated || [];
 
     const [selectedPhoto, setSelectedPhoto] = useState<any>(null);
     const [selectedEditor, setSelectedEditor] = useState<string>("");
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
     const [rejectionReason, setRejectionReason] = useState("");
-    const [searchQuery, setSearchQuery] = useState("");
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
     const [isFormDetailOpen, setIsFormDetailOpen] = useState(false);
     const [selectedForm, setSelectedForm] = useState<any>(null);
@@ -127,13 +131,12 @@ export default function POIManagement({ aoiId }: POIManagementProps) {
         }
     };
 
-    const filteredPhotos = photos?.filter((photo: any) => {
-        const matchesSearch = photo.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            photo.uploaded_by?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const photosList = photosPaginated?.data || photosPaginated || [];
+    const totalPhotos = photosPaginated?.total || 0;
 
+    const filteredPhotos = photosList.filter((photo: any) => {
         const matchesAoi = !aoiId || photo.aoi_id === aoiId;
-
-        return matchesSearch && matchesAoi;
+        return matchesAoi;
     });
 
     const getStatusColor = (status: string) => {
@@ -478,6 +481,36 @@ export default function POIManagement({ aoiId }: POIManagementProps) {
                             </div>
                         </Card>
                     ))}
+                </div>
+            )}
+
+            {/* Pagination Controls */}
+            {totalPhotos > limit && (
+                <div className="flex items-center justify-between mt-6">
+                    <p className="text-sm text-gray-500">
+                        Showing {(page - 1) * limit + 1} to {Math.min(page * limit, totalPhotos)} of {totalPhotos} photos
+                    </p>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={page === 1}
+                            onClick={() => setPage(p => p - 1)}
+                        >
+                            Previous
+                        </Button>
+                        <div className="text-sm font-medium px-2">
+                            Page {page} of {Math.ceil(totalPhotos / limit)}
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={page >= Math.ceil(totalPhotos / limit)}
+                            onClick={() => setPage(p => p + 1)}
+                        >
+                            Next
+                        </Button>
+                    </div>
                 </div>
             )}
 

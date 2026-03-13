@@ -10,12 +10,8 @@ export const adminService = {
         return response.data;
     },
 
-    /**
-     * Get all users (Admin/Manager only)
-     * @param role filter by role
-     */
-    getAllUsers: async (role?: string) => {
-        const response = await api.get('/users', { params: { role } });
+    getAllUsers: async (role?: string, page: number = 1, limit: number = 20, search?: string) => {
+        const response = await api.get('/users', { params: { role, page, limit, search } });
         return response.data;
     },
 

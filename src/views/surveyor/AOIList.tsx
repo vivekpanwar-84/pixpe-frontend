@@ -14,27 +14,28 @@ import { useSurveyor } from "@/hooks/useSurveyor";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AOIList() {
-  const { useAssignedAois } = useSurveyor();
-  const { data: aois, isLoading, isError, error } = useAssignedAois();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+
+  const { useAssignedAois } = useSurveyor();
+  const { data: aoisPaginated, isLoading, isError, error } = useAssignedAois(page, limit, searchQuery);
+
+  const aoisList = aoisPaginated?.data || aoisPaginated || [];
+  const totalAois = aoisPaginated?.total || 0;
 
   const filteredAOIs = useMemo(() => {
-    return (aois || []).filter((aoi: any) => {
-      const name = aoi.aoi_name || aoi.name || "";
+    return (aoisList || []).filter((aoi: any) => {
       const status = aoi.status || "";
       const priority = aoi.priority || "";
-      const city = aoi.city || "";
 
-      const matchesSearch =
-        name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        city.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = statusFilter === "all" || status.toLowerCase() === statusFilter.toLowerCase();
       const matchesPriority = priorityFilter === "all" || priority.toLowerCase() === priorityFilter.toLowerCase();
-      return matchesSearch && matchesStatus && matchesPriority;
+      return matchesStatus && matchesPriority;
     });
-  }, [aois, searchQuery, statusFilter, priorityFilter]);
+  }, [aoisList, statusFilter, priorityFilter]);
 
   if (isLoading) {
     return (
@@ -239,6 +240,36 @@ export default function AOIList() {
           </div>
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {totalAois > limit && (
+        <div className="flex items-center justify-between mt-6">
+          <p className="text-sm text-gray-500">
+            Showing {(page - 1) * limit + 1} to {Math.min(page * limit, totalAois)} of {totalAois} areas
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 1}
+              onClick={() => setPage(p => p - 1)}
+            >
+              Previous
+            </Button>
+            <div className="text-sm font-medium px-2">
+              Page {page} of {Math.ceil(totalAois / limit)}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= Math.ceil(totalAois / limit)}
+              onClick={() => setPage(p => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -4,10 +4,10 @@ import { surveyorService } from '@/services/surveyor.service';
 export const useSurveyor = () => {
     const queryClient = useQueryClient();
 
-    const useAssignedAois = () => {
+    const useAssignedAois = (page: number = 1, limit: number = 20, search: string = '') => {
         return useQuery({
-            queryKey: ['aois', 'assigned'],
-            queryFn: surveyorService.getAssignedAois,
+            queryKey: ['aois', 'assigned', { page, limit, search }],
+            queryFn: () => surveyorService.getAssignedAois(page, limit, search),
         });
     };
 
@@ -19,10 +19,10 @@ export const useSurveyor = () => {
         });
     };
 
-    const useMyUploads = (aoiId?: string) => {
+    const useMyUploads = (aoiId?: string, page: number = 1, limit: number = 50, search: string = '') => {
         return useQuery({
-            queryKey: ['photos', 'my-uploads', aoiId],
-            queryFn: () => surveyorService.getMyUploads(aoiId),
+            queryKey: ['photos', 'my-uploads', aoiId, { page, limit, search }],
+            queryFn: () => surveyorService.getMyUploads(aoiId, page, limit, search),
         });
     };
 

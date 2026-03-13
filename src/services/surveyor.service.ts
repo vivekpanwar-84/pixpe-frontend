@@ -2,8 +2,8 @@ import api from './api';
 
 export const surveyorService = {
     // AOIs
-    getAssignedAois: async () => {
-        const response = await api.get('/aoi/assigned');
+    getAssignedAois: async (page: number = 1, limit: number = 20, search?: string) => {
+        const response = await api.get('/aoi/assigned', { params: { page, limit, search } });
         return response.data;
     },
 
@@ -37,8 +37,8 @@ export const surveyorService = {
         return response.data;
     },
 
-    getMyUploads: async (aoiId?: string) => {
-        const response = await api.get('/photos/my-uploads', { params: { aoi_id: aoiId } });
+    getMyUploads: async (aoiId?: string, page: number = 1, limit: number = 20, search?: string) => {
+        const response = await api.get('/photos/my-uploads', { params: { aoi_id: aoiId, page, limit, search } });
         return response.data;
     },
 

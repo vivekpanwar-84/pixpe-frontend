@@ -34,21 +34,28 @@ export default function SurveyorHome() {
 
         setProfile(profileData);
 
+        // Extract data arrays from paginated responses
+        const safeAois = Array.isArray(aois) ? aois : (aois?.data || []);
+        const safeUploads = Array.isArray(uploads) ? uploads : (uploads?.data || []);
+
         // Filter photos uploaded today
         const today = new Date().toDateString();
-        const photosToday = uploads.filter((u: any) => new Date(u.createdAt).toDateString() === today).length;
+        const photosToday = safeUploads.filter((u: any) => {
+          const createdAt = u.createdAt || u.created_at;
+          return createdAt ? new Date(createdAt).toDateString() === today : false;
+        }).length;
 
         // Calculate completed AOIs
-        const completedAois = aois.filter((a: any) => a.status === 'CLOSED' || a.status === 'SUBMITTED').length;
+        const completedAois = safeAois.filter((a: any) => a.status === 'CLOSED' || a.status === 'SUBMITTED').length;
 
         setKpis([
-          { icon: MapPin, label: "Active AOIs", value: aois.length.toString(), color: "text-blue-600", bg: "bg-blue-50" },
+          { icon: MapPin, label: "Active AOIs", value: safeAois.length.toString(), color: "text-blue-600", bg: "bg-blue-50" },
           { icon: Camera, label: "Photos Today", value: photosToday.toString(), color: "text-green-600", bg: "bg-green-50" },
           { icon: CheckCircle, label: "Completed", value: completedAois.toString(), color: "text-purple-600", bg: "bg-purple-50" },
-          { icon: Award, label: "Total Pixpoints", value: `${balanceData.total_pixpoints}`, color: "text-orange-600", bg: "bg-orange-50" },
+          { icon: Award, label: "Total Pixpoints", value: `${balanceData?.total_pixpoints || 0}`, color: "text-orange-600", bg: "bg-orange-50" },
         ]);
 
-        setRecentAOIs(aois.slice(0, 3));
+        setRecentAOIs(safeAois.slice(0, 3));
       } catch (error) {
         console.error("Error fetching surveyor data:", error);
       } finally {

@@ -4,11 +4,10 @@ import { adminService } from '@/services/admin.service';
 export const useAdmin = () => {
     const queryClient = useQueryClient();
 
-    // Query: Fetch all users
-    const useAllUsers = (role?: string) => {
+    const useAllUsers = (role?: string, page: number = 1, limit: number = 20, search: string = '') => {
         return useQuery({
-            queryKey: ['users', role],
-            queryFn: () => adminService.getAllUsers(role),
+            queryKey: ['users', role, { page, limit, search }],
+            queryFn: () => adminService.getAllUsers(role, page, limit, search),
         });
     };
 

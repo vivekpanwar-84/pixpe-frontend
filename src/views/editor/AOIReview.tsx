@@ -3,6 +3,7 @@
 import { useEditor } from "@/hooks/useEditor";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import {
@@ -54,25 +55,24 @@ function AOIStats({ aoiId }: { aoiId: string }) {
 
 
 export default function AOIReview() {
-    const { useAssignedAois } = useEditor();
-    const { data: aois, isLoading, error } = useAssignedAois();
-
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("ALL");
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(5);
+
+    const { useAssignedAois } = useEditor();
+    const { data: aoisPaginated, isLoading, error } = useAssignedAois(undefined, page, limit, searchQuery);
+
+    const aoisList = aoisPaginated?.data || aoisPaginated || [];
+    const totalAois = aoisPaginated?.total || 0;
 
     const filteredAois = useMemo(() => {
-        if (!aois) return [];
-        return aois.filter((aoi: any) => {
-            const matchesSearch =
-                (aoi.aoi_name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
-                (aoi.aoi_code?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
-                (aoi.city?.toLowerCase() || "").includes(searchQuery.toLowerCase());
-
+        if (!aoisList) return [];
+        return aoisList.filter((aoi: any) => {
             const matchesStatus = statusFilter === "ALL" || aoi.status === statusFilter;
-
-            return matchesSearch && matchesStatus;
+            return matchesStatus;
         });
-    }, [aois, searchQuery, statusFilter]);
+    }, [aoisList, statusFilter]);
 
     if (isLoading) {
         return (
@@ -195,6 +195,36 @@ export default function AOIReview() {
                                 </Link>
                             </motion.div>
                         ))}
+                    </div>
+                )}
+
+                {/* Pagination Controls */}
+                {totalAois > limit && (
+                    <div className="flex items-center justify-between mt-6">
+                        <p className="text-sm text-gray-500">
+                            Showing {(page - 1) * limit + 1} to {Math.min(page * limit, totalAois)} of {totalAois} areas
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={page === 1}
+                                onClick={() => setPage(p => p - 1)}
+                            >
+                                Previous
+                            </Button>
+                            <div className="text-sm font-medium px-2">
+                                Page {page} of {Math.ceil(totalAois / limit)}
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={page >= Math.ceil(totalAois / limit)}
+                                onClick={() => setPage(p => p + 1)}
+                            >
+                                Next
+                            </Button>
+                        </div>
                     </div>
                 )}
             </div>

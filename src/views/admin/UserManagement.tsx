@@ -30,10 +30,14 @@ type UserFormData = z.infer<typeof userSchema>;
 
 export default function UserManagement() {
   const { useAllUsers, createUser } = useAdmin();
-  const { data: users, isLoading, isError } = useAllUsers();
 
   const [roleFilter, setRoleFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+
+  const { data: usersPaginated, isLoading, isError } = useAllUsers(roleFilter === "all" ? undefined : roleFilter, page, limit, searchQuery);
+
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -65,16 +69,10 @@ export default function UserManagement() {
     return String(slug || "").toLowerCase();
   };
 
-  const filteredUsers = (users || []).filter((user: any) => {
-    const userRole = getRoleSlug(user);
-    const userName = user?.name || "";
-    const userEmail = user?.email || "";
+  const usersList = usersPaginated?.data || usersPaginated || [];
+  const totalUsers = usersPaginated?.total || 0;
 
-    const matchesRole = roleFilter === "all" || userRole.toLowerCase() === roleFilter.toLowerCase();
-    const matchesSearch = userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      userEmail.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesRole && matchesSearch;
-  });
+  const filteredUsers = usersList;
 
   const handleAddUser = (data: UserFormData) => {
     // Map role to lowercase for backend
@@ -320,6 +318,36 @@ export default function UserManagement() {
           </table>
         </CardContent>
       </Card>
+
+      {/* Pagination Controls */}
+      {totalUsers > limit && (
+        <div className="flex items-center justify-between mt-6">
+          <p className="text-sm text-gray-500">
+            Showing {(page - 1) * limit + 1} to {Math.min(page * limit, totalUsers)} of {totalUsers} users
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 1}
+              onClick={() => setPage(p => p - 1)}
+            >
+              Previous
+            </Button>
+            <div className="text-sm font-medium px-2">
+              Page {page} of {Math.ceil(totalUsers / limit)}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= Math.ceil(totalUsers / limit)}
+              onClick={() => setPage(p => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Dialog open={!!statusConfirmUser} onOpenChange={(open) => !open && setStatusConfirmUser(null)}>
         <DialogContent>

@@ -2,8 +2,8 @@ import api from './api';
 
 export const managerService = {
     // AOI Management
-    getAllAois: async () => {
-        const response = await api.get('/aoi');
+    getAllAois: async (page: number = 1, limit: number = 20, search?: string) => {
+        const response = await api.get('/aoi', { params: { page, limit, search } });
         return response.data;
     },
 
@@ -42,8 +42,8 @@ export const managerService = {
     },
 
     // Photos & Forms Review
-    getAllPhotos: async (status?: string, aoiId?: string) => {
-        const response = await api.get('/photos', { params: { status, aoi_id: aoiId } });
+    getAllPhotos: async (status?: string, aoiId?: string, page: number = 1, limit: number = 20, search?: string) => {
+        const response = await api.get('/photos', { params: { status, aoi_id: aoiId, page, limit, search } });
         return response.data;
     },
 
@@ -57,8 +57,8 @@ export const managerService = {
         return response.data;
     },
 
-    getAllForms: async (status?: string, photoId?: string, aoiId?: string) => {
-        const response = await api.get('/forms', { params: { status, photo_id: photoId, aoi_id: aoiId } });
+    getAllForms: async (status?: string, photoId?: string, aoiId?: string, page: number = 1, limit: number = 20, search?: string) => {
+        const response = await api.get('/forms', { params: { status, photo_id: photoId, aoi_id: aoiId, page, limit, search } });
         return response.data;
     },
 

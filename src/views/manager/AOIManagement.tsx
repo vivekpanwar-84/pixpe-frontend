@@ -35,8 +35,12 @@ export default function AOIManagement() {
 
   const csvInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: aoisData, isLoading: isLoadingAois } = useAllAois();
-  const { data: usersData, isLoading: isLoadingUsers } = useAllUsers();
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const { data: aoisPaginatedData, isLoading: isLoadingAois } = useAllAois(page, limit, searchQuery);
+  const { data: usersPaginatedData, isLoading: isLoadingUsers } = useAllUsers();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -56,7 +60,6 @@ export default function AOIManagement() {
   const [bulkAssignEditor, setBulkAssignEditor] = useState<string | null>(null);
   const [openBulkSurveyor, setOpenBulkSurveyor] = useState(false);
   const [openBulkEditor, setOpenBulkEditor] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [selectedAoiForPhotos, setSelectedAoiForPhotos] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'AOI_LIST' | 'PHOTO_LIST'>('AOI_LIST');
@@ -73,33 +76,28 @@ export default function AOIManagement() {
     boundary_geojson: null as any,
   });
 
-  const surveyors = (usersData || [])
+  const usersList = usersPaginatedData?.data || usersPaginatedData || [];
+
+  const surveyors = usersList
     .filter((u: any) => {
       const role = typeof u.role === 'string' ? u.role : u.role?.slug;
       return role?.toLowerCase() === 'surveyor';
     })
     .map((u: any) => ({ value: u.id, label: u.name }));
 
-  const editors = (usersData || [])
+  const editors = usersList
     .filter((u: any) => {
       const role = typeof u.role === 'string' ? u.role : u.role?.slug;
       return role?.toLowerCase() === 'editor';
     })
     .map((u: any) => ({ value: u.id, label: u.name }));
 
-  const aoisList = aoisData || [];
+  const aoisList = aoisPaginatedData?.data || [];
+  const totalAois = aoisPaginatedData?.total || 0;
 
   const filteredAoisList = aoisList.filter((aoi: any) => {
-    const query = searchQuery.toLowerCase();
-    const matchesSearch =
-      !query ||
-      aoi.aoi_name?.toLowerCase().includes(query) ||
-      aoi.aoi_code?.toLowerCase().includes(query) ||
-      aoi.city?.toLowerCase().includes(query) ||
-      aoi.assigned_to_surveyor?.name?.toLowerCase().includes(query) ||
-      aoi.assigned_to_editor?.name?.toLowerCase().includes(query);
     const matchesStatus = statusFilter === "ALL" || aoi.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    return matchesStatus;
   });
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,6 +157,7 @@ export default function AOIManagement() {
 
     const formData = new FormData();
     formData.append("file", file);
+    console.log("Uploading file:", file.name, file.size);
 
     const toastId = toast.loading("Importing bulk AOIs...");
 
@@ -880,6 +879,36 @@ export default function AOIManagement() {
               </Card>
             ))}
           </>
+        )}
+
+        {/* Pagination Controls */}
+        {totalAois > limit && (
+          <div className="flex items-center justify-between mt-6">
+            <p className="text-sm text-gray-500">
+              Showing {(page - 1) * limit + 1} to {Math.min(page * limit, totalAois)} of {totalAois} AOIs
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 1}
+                onClick={() => setPage(p => p - 1)}
+              >
+                Previous
+              </Button>
+              <div className="text-sm font-medium px-2">
+                Page {page} of {Math.ceil(totalAois / limit)}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= Math.ceil(totalAois / limit)}
+                onClick={() => setPage(p => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         )}
       </div>
 

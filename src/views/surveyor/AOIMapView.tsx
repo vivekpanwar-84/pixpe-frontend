@@ -48,13 +48,15 @@ export default function AOIMapView() {
 
     const states = useMemo(() => {
         if (!aois) return [];
-        const uniqueStates = new Set(aois.map((aoi: any) => aoi.state).filter(Boolean));
+        const safeAois = Array.isArray(aois) ? aois : (aois?.data || []);
+        const uniqueStates = new Set(safeAois.map((aoi: any) => aoi.state).filter(Boolean));
         return Array.from(uniqueStates).sort() as string[];
     }, [aois]);
 
     const filteredAois = useMemo(() => {
         if (!aois) return [];
-        return aois.filter((aoi: any) => {
+        const safeAois = Array.isArray(aois) ? aois : (aois?.data || []);
+        return safeAois.filter((aoi: any) => {
             const matchesSearch =
                 aoi.aoi_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 aoi.aoi_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
