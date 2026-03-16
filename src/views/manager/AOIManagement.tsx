@@ -36,7 +36,7 @@ export default function AOIManagement() {
   const csvInputRef = useRef<HTMLInputElement>(null);
 
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(100);
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: aoisPaginatedData, isLoading: isLoadingAois } = useAllAois(page, limit, searchQuery);
@@ -63,6 +63,9 @@ export default function AOIManagement() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [selectedAoiForPhotos, setSelectedAoiForPhotos] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'AOI_LIST' | 'PHOTO_LIST'>('AOI_LIST');
+  const [csvFileName, setCsvFileName] = useState<string>("");
+  const [isBulkImportLoading, setIsBulkImportLoading] = useState(false);
+  const [isBulkAssignLoading, setIsBulkAssignLoading] = useState(false);
 
   const [newAOI, setNewAOI] = useState({
     aoi_name: "",
@@ -155,25 +158,28 @@ export default function AOIManagement() {
       return;
     }
 
+    setCsvFileName(file.name);
+    setIsBulkImportLoading(true);
+
     const formData = new FormData();
     formData.append("file", file);
-    console.log("Uploading file:", file.name, file.size);
-
-    const toastId = toast.loading("Importing bulk AOIs...");
 
     bulkCreateAoi.mutate(formData, {
       onSuccess: (data: any) => {
+        setIsBulkImportLoading(false);
         if (data.errorCount > 0) {
-          toast.warning(`Imported ${data.successCount} AOIs with ${data.errorCount} errors`, { id: toastId });
-          console.error("Bulk import errors:", data.errors);
+          toast.warning(`Imported ${data.successCount} AOIs with ${data.errorCount} errors`);
         } else {
-          toast.success(`Successfully imported ${data.successCount} AOIs`, { id: toastId });
+          toast.success(`Successfully imported ${data.successCount} AOIs`);
         }
         if (csvInputRef.current) csvInputRef.current.value = "";
+        setCsvFileName("");
       },
       onError: (err: any) => {
-        toast.error(err.response?.data?.message || "Bulk import failed", { id: toastId });
+        setIsBulkImportLoading(false);
+        toast.error(err.response?.data?.message || "Bulk import failed");
         if (csvInputRef.current) csvInputRef.current.value = "";
+        setCsvFileName("");
       },
     });
   };
@@ -288,6 +294,8 @@ export default function AOIManagement() {
       toast.error("Please select at least one person to assign");
       return;
     }
+    setIsBulkAssignLoading(true);
+    setIsBulkAssignDialogOpen(false);
     bulkAssignAoi.mutate(
       {
         aoi_ids: selectedAois,
@@ -296,13 +304,14 @@ export default function AOIManagement() {
       },
       {
         onSuccess: () => {
+          setIsBulkAssignLoading(false);
           toast.success(`${selectedAois.length} AOI(s) assigned successfully`);
-          setIsBulkAssignDialogOpen(false);
           setSelectedAois([]);
           setBulkAssignSurveyor(null);
           setBulkAssignEditor(null);
         },
         onError: (err: any) => {
+          setIsBulkAssignLoading(false);
           toast.error(err.response?.data?.message || "Bulk assignment failed");
         },
       }
@@ -912,6 +921,57 @@ export default function AOIManagement() {
         )}
       </div>
 
+      {/* Bulk Import Loading Modal */}
+      <Dialog open={isBulkImportLoading} onOpenChange={() => { }}>
+        <DialogContent className="max-w-sm text-center [&>button]:hidden" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <div className="flex flex-col items-center gap-5 py-6">
+            <div className="relative">
+              <div className="bg-gradient-to-br from-blue-100 to-indigo-100 p-5 rounded-2xl shadow-sm">
+                <Upload className="w-8 h-8 text-blue-600" />
+              </div>
+              <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1 shadow-md">
+                <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-bold text-gray-900">Importing AOIs...</h3>
+              <p className="text-sm text-gray-500 max-w-xs leading-relaxed">
+                Processing <span className="font-semibold text-gray-700">{csvFileName}</span>. This may take a moment depending on the file size.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-gray-400 font-medium">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+              <span>Please do not close this window</span>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Assign Loading Modal */}
+      <Dialog open={isBulkAssignLoading} onOpenChange={() => { }}>
+        <DialogContent className="max-w-sm text-center [&>button]:hidden" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <div className="flex flex-col items-center gap-5 py-6">
+            <div className="relative">
+              <div className="bg-gradient-to-br from-emerald-100 to-teal-100 p-5 rounded-2xl shadow-sm">
+                <Users className="w-8 h-8 text-emerald-600" />
+              </div>
+              <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1 shadow-md">
+                <Loader2 className="w-5 h-5 text-emerald-600 animate-spin" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-bold text-gray-900">Assigning AOIs...</h3>
+              <p className="text-sm text-gray-500 max-w-xs leading-relaxed">
+                Assigning <span className="font-semibold text-gray-700">{selectedAois.length} AOI{selectedAois.length > 1 ? 's' : ''}</span> to the selected team member. This may take a moment.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-gray-400 font-medium">
+              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+              <span>Please do not close this window</span>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
     FileText, Search, Filter, Eye, Clock,
     CheckCircle, XCircle, ChevronRight,
@@ -27,17 +27,30 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 
 export default function FormsManagement() {
-    const { useAllForms } = useManager();
-    const { data: forms, isLoading } = useAllForms();
     const [selectedForm, setSelectedForm] = useState<any>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(20);
 
-    const safeForms = Array.isArray(forms) ? forms : (forms?.data || []);
-    const filteredForms = safeForms.filter((form: any) =>
-        form.form_data?.business_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        form.submitted_by?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    // Debounce search query
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 500);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
+
+    const { useAllForms } = useManager();
+    const { data: formsPaginated, isLoading } = useAllForms({
+        page,
+        limit,
+        search: debouncedSearchQuery
+    });
+
+    const forms = formsPaginated?.data || formsPaginated || [];
+    const filteredForms = Array.isArray(forms) ? forms : [];
 
     const getStatusBadge = (status: string) => {
         switch (status) {
@@ -56,15 +69,6 @@ export default function FormsManagement() {
         setSelectedForm(form);
         setIsDetailOpen(true);
     };
-
-    if (isLoading) {
-        return (
-            <div className="p-6 space-y-4">
-                <Skeleton className="h-10 w-48" />
-                <Skeleton className="h-64 w-full" />
-            </div>
-        );
-    }
 
     return (
         <div className="p-4 lg:p-8 space-y-6 bg-gray-50/50 min-h-[calc(100vh-4rem)]">
@@ -106,7 +110,17 @@ export default function FormsManagement() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredForms?.length === 0 ? (
+                                {isLoading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="p-12">
+                                            <div className="space-y-4">
+                                                {[1, 2, 3, 4, 5].map((i) => (
+                                                    <Skeleton key={i} className="h-12 w-full rounded-lg" />
+                                                ))}
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : filteredForms?.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={5} className="h-64 text-center">
                                             <div className="flex flex-col items-center justify-center text-gray-400">

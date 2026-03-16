@@ -21,7 +21,7 @@ import {
     XCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { ImageWithLoader } from "@/components/ImageWithLoader";
@@ -171,9 +171,18 @@ export default function FormReview() {
     const [expandedAoi, setExpandedAoi] = useState<string | null>(null);
     const [selectedForm, setSelectedForm] = useState<any>(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
     const [aoiFilter, setAoiFilter] = useState("ALL");
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
+
+    // Debounce search query
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 500);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
 
     // Selection state
     const [selectedFormIds, setSelectedFormIds] = useState<Set<string>>(new Set());
@@ -187,8 +196,8 @@ export default function FormReview() {
             const businessName = (form.form?.business_name || "").toLowerCase();
             const aoiName = (form.aoi?.aoi_name || "").toLowerCase();
             const city = (form.form?.city || form.aoi?.city || "").toLowerCase();
-            const query = searchQuery.toLowerCase();
-            const matchesSearch = !searchQuery || businessName.includes(query) || aoiName.includes(query) || city.includes(query);
+            const query = debouncedSearchQuery.toLowerCase();
+            const matchesSearch = !debouncedSearchQuery || businessName.includes(query) || aoiName.includes(query) || city.includes(query);
 
             // AOI Filter
             const matchesAoi = aoiFilter === "ALL" || form.aoi_id === aoiFilter || form.aoi?.aoi_code === aoiFilter;
@@ -200,7 +209,7 @@ export default function FormReview() {
 
             return matchesSearch && matchesAoi && matchesStartDate && matchesEndDate;
         });
-    }, [allForms, searchQuery, aoiFilter, startDate, endDate]);
+    }, [allForms, debouncedSearchQuery, aoiFilter, startDate, endDate]);
 
     const aoiGroupedForms = useMemo(() => {
         const groups: Record<string, { aoi: any, forms: any[] }> = {};
@@ -262,37 +271,83 @@ export default function FormReview() {
         const headers = [
             "AOI Name",
             "AOI Code",
-            "Business Name",
-            "Phone",
-            "GST Number",
-            "Categories",
-            "Address",
-            "City",
-            "Timings",
-            "AI Details/Observations",
+            "AOI City",
+            "AOI State",
+            "AOI Pin Code",
+            "AOI Center Latitude",
+            "AOI Center Longitude",
             "Photo ID",
             "Photo URL",
+            "Photo Type",
+            "Photo Latitude",
+            "Photo Longitude",
+            "Business Name",
+            "Business Category",
+            "Business Sub Category",
+            "Contact Person Name",
+            "Contact Person Designation",
+            "Phone",
+            "Alternate Phone",
+            "Email",
+            "Website",
+            "Address Line 1",
+            "Address Line 2",
+            "Landmark",
+            "City",
+            "State",
+            "Pin Code",
+            "Country",
+            "Latitude",
+            "Longitude",
+            "Services Offered",
+            "Operating Hours",
+            "Notes / Observations",
+            "Tags",
             "Submission Date",
-            "Status"
+            "Review Status"
         ];
 
         const rows = formsToExport.map((f: any) => {
             const d = f.form || {};
+            const aoi = f.aoi || {};
+            const photo = f.photo || {};
             return [
-                f.aoi?.aoi_name || "N/A",
-                f.aoi?.aoi_code || "N/A",
-                d.business_name || "N/A",
-                d.phone || "N/A",
-                d.email || "N/A",
-                Array.isArray(d.services_offered) ? d.services_offered.join(" | ") : (d.services_offered || "N/A"),
-                d.address_line1 + (d.address_line2 ? ", " + d.address_line2 : "") || "N/A",
-                d.city || "N/A",
-                d.operating_hours ? JSON.stringify(d.operating_hours) : "N/A",
-                d.notes || "N/A",
-                f.photo_id || "N/A",
-                f.photo?.photo_url || "N/A",
+                aoi.aoi_name || "Not Provided",
+                aoi.aoi_code || "Not Provided",
+                aoi.city || "Not Provided",
+                aoi.state || "Not Provided",
+                aoi.pin_code || "Not Provided",
+                aoi.center_latitude || "Not Provided",
+                aoi.center_longitude || "Not Provided",
+                f.photo_id || "Not Provided",
+                photo.photo_url || "Not Provided",
+                photo.photo_type || "Not Provided",
+                photo.latitude || "Not Provided",
+                photo.longitude || "Not Provided",
+                d.business_name || "Not Provided",
+                d.business_category || "Not Provided",
+                d.business_sub_category || "Not Provided",
+                d.contact_person_name || "Not Provided",
+                d.contact_person_designation || "Not Provided",
+                d.phone || "Not Provided",
+                d.alternate_phone || "Not Provided",
+                d.email || "Not Provided",
+                d.website || "Not Provided",
+                d.address_line1 || "Not Provided",
+                d.address_line2 || "Not Provided",
+                d.landmark || "Not Provided",
+                d.city || "Not Provided",
+                d.state || "Not Provided",
+                d.pin_code || "Not Provided",
+                d.country || "Not Provided",
+                d.latitude || "Not Provided",
+                d.longitude || "Not Provided",
+                Array.isArray(d.services_offered) ? d.services_offered.join(" | ") : (d.services_offered || "Not Provided"),
+                d.operating_hours ? JSON.stringify(d.operating_hours) : "Not Provided",
+                d.notes || "Not Provided",
+                Array.isArray(d.tags) ? d.tags.join(" | ") : (d.tags || "Not Provided"),
                 new Date(f.created_at).toLocaleString(),
-                f.review_status || "N/A"
+                f.review_status || "Not Provided"
             ];
         });
 
@@ -315,23 +370,6 @@ export default function FormReview() {
         link.click();
         document.body.removeChild(link);
     };
-
-    if (isLoadingForms) {
-        return (
-            <div className="p-6 space-y-6 w-full max-w-7xl">
-                <div className="space-y-2">
-                    <Skeleton className="h-10 w-48 rounded-lg" />
-                    <Skeleton className="h-4 w-72 rounded-md" />
-                </div>
-                <div className="flex gap-3">
-                    <Skeleton className="h-12 w-full max-w-sm rounded-[16px]" />
-                </div>
-                {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-24 w-full rounded-[20px]" />
-                ))}
-            </div>
-        );
-    }
 
     const isAllSelected = filteredFormsList.length > 0 && filteredFormsList.every((f: any) => selectedFormIds.has(f.id));
 
@@ -439,7 +477,13 @@ export default function FormReview() {
                 </div>
             </div>
 
-            {aoiGroupedForms.length === 0 ? (
+            {isLoadingForms ? (
+                <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                        <Skeleton key={i} className="h-24 w-full rounded-[24px]" />
+                    ))}
+                </div>
+            ) : aoiGroupedForms.length === 0 ? (
                 <div className="p-20 text-center border-2 border-dashed rounded-[40px] bg-gray-50/50 border-gray-200">
                     <div className="bg-white w-20 h-20 rounded-3xl shadow-sm flex items-center justify-center mx-auto mb-6 border border-gray-100">
                         <FileText className="w-10 h-10 text-gray-200" />
@@ -456,16 +500,16 @@ export default function FormReview() {
                         return (
                             <div key={group.aoi.id} className={`border rounded-[24px] bg-white overflow-hidden transition-all duration-300 ${isAoiFullySelected ? 'border-blue-200 shadow-lg shadow-blue-50/50' : 'border-gray-100 shadow-sm'}`}>
                                 <div className="flex items-center">
-                                    <div className="pl-6 h-full flex items-center">
+                                    <div className="pl-4 md:pl-6 h-full flex items-center">
                                         <div
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 toggleAoiSelection(group.aoi.id, group.forms);
                                             }}
-                                            className={`w-5 h-5 rounded-md border-2 flex items-center justify-center cursor-pointer transition-all ${isAoiFullySelected ? 'bg-blue-600 border-blue-600' : isAoiPartiallySelected ? 'bg-blue-100 border-blue-400' : 'bg-white border-gray-200 hover:border-blue-300'}`}
+                                            className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center cursor-pointer transition-all active:scale-90 ${isAoiFullySelected ? 'bg-blue-600 border-blue-600 shadow-md shadow-blue-200' : isAoiPartiallySelected ? 'bg-blue-100 border-blue-400' : 'bg-white border-gray-200 hover:border-blue-300'}`}
                                         >
-                                            {isAoiFullySelected && <div className="w-2.5 h-2.5 bg-white rounded-[1px]" />}
-                                            {isAoiPartiallySelected && <div className="w-2 h-0.5 bg-blue-600 rounded-full" />}
+                                            {isAoiFullySelected && <div className="w-3 h-3 bg-white rounded-sm" />}
+                                            {isAoiPartiallySelected && <div className="w-3 h-0.5 bg-blue-600 rounded-full" />}
                                         </div>
                                     </div>
 
@@ -516,9 +560,9 @@ export default function FormReview() {
                                                         >
                                                             <div
                                                                 onClick={() => toggleFormSelection(form.id)}
-                                                                className={`w-5 h-5 rounded-md border-2 flex items-center justify-center cursor-pointer transition-all ${isSelected ? 'bg-blue-600 border-blue-600 shadow-md shadow-blue-100' : 'bg-white border-gray-200 group-hover/item:border-blue-300'}`}
+                                                                className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center cursor-pointer transition-all active:scale-90 ${isSelected ? 'bg-blue-600 border-blue-600 shadow-md shadow-blue-100' : 'bg-white border-gray-200 group-hover/item:border-blue-300'}`}
                                                             >
-                                                                {isSelected && <div className="w-2.5 h-2.5 bg-white rounded-[1px]" />}
+                                                                {isSelected && <div className="w-3 h-3 bg-white rounded-sm" />}
                                                             </div>
 
                                                             <div className="flex flex-col sm:flex-row items-center flex-1 justify-between gap-4">

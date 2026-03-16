@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Search, Filter, MapPin, ChevronRight, SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,13 +15,22 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AOIList() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
+
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   const { useAssignedAois } = useSurveyor();
-  const { data: aoisPaginated, isLoading, isError, error } = useAssignedAois(page, limit, searchQuery);
+  const { data: aoisPaginated, isLoading, isError, error } = useAssignedAois(page, limit, debouncedSearchQuery);
 
   const aoisList = aoisPaginated?.data || aoisPaginated || [];
   const totalAois = aoisPaginated?.total || 0;
@@ -36,29 +45,6 @@ export default function AOIList() {
       return matchesStatus && matchesPriority;
     });
   }, [aoisList, statusFilter, priorityFilter]);
-
-  if (isLoading) {
-    return (
-      <div className="p-4 lg:p-6 space-y-4 max-w-7xl mx-auto">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-4 w-64" />
-        <div className="space-y-3 mt-6">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-32 w-full" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="p-4 lg:p-6 text-center space-y-4">
-        <p className="text-red-500">Error loading AOIs: {(error as any)?.message}</p>
-        <Button onClick={() => window.location.reload()}>Retry</Button>
-      </div>
-    );
-  }
   const FilterPanel = () => (
     <div className="space-y-4">
       <div>
@@ -166,13 +152,29 @@ export default function AOIList() {
       </div>
 
       <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
-        {filteredAOIs.length === 0 ? (
+        {isError ? (
+          <div className="p-12 text-center">
+            <p className="text-red-500 mb-4">Error loading AOIs: {(error as any)?.message}</p>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </div>
+        ) : isLoading && !aoisPaginated ? (
+          <div className="p-8 space-y-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </div>
+        ) : filteredAOIs.length === 0 ? (
           <div className="p-12 text-center text-gray-400">
             <MapPin className="w-12 h-12 mx-auto mb-4 opacity-20" />
             <p>No AOIs found matching your criteria</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto relative">
+            {isLoading && (
+              <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center z-10">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            )}
             <table className="w-full text-left border-collapse">
               <thead className="bg-gray-50 border-b">
                 <tr>
@@ -242,7 +244,7 @@ export default function AOIList() {
       </div>
 
       {/* Pagination Controls */}
-      {totalAois > limit && (
+      {!isLoading && totalAois > limit && (
         <div className="flex items-center justify-between mt-6">
           <p className="text-sm text-gray-500">
             Showing {(page - 1) * limit + 1} to {Math.min(page * limit, totalAois)} of {totalAois} areas

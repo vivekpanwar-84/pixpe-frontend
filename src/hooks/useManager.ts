@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { managerService } from '@/services/manager.service';
 
 export const useManager = () => {
@@ -8,6 +8,7 @@ export const useManager = () => {
         return useQuery({
             queryKey: ['aois', 'all', { page, limit, search }],
             queryFn: () => managerService.getAllAois(page, limit, search),
+            placeholderData: keepPreviousData,
         });
     };
 
@@ -60,6 +61,7 @@ export const useManager = () => {
         return useQuery({
             queryKey: ['photos', 'all', filters],
             queryFn: () => managerService.getAllPhotos(filters?.status, filters?.aoiId, filters?.page || 1, filters?.limit || 20, filters?.search),
+            placeholderData: keepPreviousData,
         });
     };
 
@@ -79,10 +81,19 @@ export const useManager = () => {
         },
     });
 
+    const bulkAssignPhotosMutation = useMutation({
+        mutationFn: ({ photoIds, editorId }: { photoIds: string[]; editorId: string }) =>
+            managerService.bulkAssignPhotos(photoIds, editorId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['photos'] });
+        },
+    });
+
     const useAllForms = (filters?: { status?: string, photoId?: string, aoiId?: string, page?: number, limit?: number, search?: string }) => {
         return useQuery({
             queryKey: ['forms', 'all', filters],
             queryFn: () => managerService.getAllForms(filters?.status, filters?.photoId, filters?.aoiId, filters?.page || 1, filters?.limit || 20, filters?.search),
+            placeholderData: keepPreviousData,
         });
     };
 
@@ -97,6 +108,7 @@ export const useManager = () => {
         useAllPhotos,
         updatePhotoStatus: updatePhotoStatusMutation,
         assignPhoto: assignPhotoMutation,
+        bulkAssignPhotos: bulkAssignPhotosMutation,
         useAllForms,
     };
 };

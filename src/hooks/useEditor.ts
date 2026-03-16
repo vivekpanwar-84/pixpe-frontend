@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { editorService } from '@/services/editor.service';
 
 export const useEditor = () => {
@@ -8,6 +8,7 @@ export const useEditor = () => {
         return useQuery({
             queryKey: ['photos', 'assigned', { page, limit, search }],
             queryFn: () => editorService.getAssignedPhotos(page, limit, search),
+            placeholderData: keepPreviousData,
         });
     };
 
@@ -16,6 +17,7 @@ export const useEditor = () => {
             queryKey: ['photos', 'assigned', id],
             queryFn: () => editorService.getAssignedPhotoById(id),
             enabled: !!id,
+            placeholderData: keepPreviousData,
         });
     };
 
@@ -24,6 +26,7 @@ export const useEditor = () => {
             queryKey: ['photos', 'aoi', aoiId, 'editor', editorId],
             queryFn: () => editorService.getPhotosByAoiAndEditor(aoiId, editorId),
             enabled: !!aoiId && !!editorId,
+            placeholderData: keepPreviousData,
         });
     };
 
@@ -44,10 +47,11 @@ export const useEditor = () => {
         },
     });
 
-    const useAssignedAois = (hasForms?: boolean, page: number = 1, limit: number = 20, search: string = '') => {
+    const useAssignedAois = (isEditor: boolean = false, page: number = 1, limit: number = 20, search: string = '') => {
         return useQuery({
-            queryKey: ['aoi', 'assigned', { hasForms, page, limit, search }],
-            queryFn: () => editorService.getAssignedAois(hasForms, page, limit, search),
+            queryKey: ['assigned-aois', { isEditor, page, limit, search }],
+            queryFn: () => editorService.getAssignedAois(isEditor, page, limit, search),
+            placeholderData: keepPreviousData,
         });
     };
 
@@ -56,14 +60,16 @@ export const useEditor = () => {
             queryKey: ['aoi', 'assigned', id],
             queryFn: () => editorService.getAoiById(id),
             enabled: !!id,
+            placeholderData: keepPreviousData,
         });
     };
 
     const useAoiStats = (id: string) => {
         return useQuery({
-            queryKey: ['aoi', id, 'stats'],
+            queryKey: ['aoi-stats', id],
             queryFn: () => editorService.getAoiStats(id),
             enabled: !!id,
+            placeholderData: keepPreviousData,
         });
     };
 
@@ -71,6 +77,7 @@ export const useEditor = () => {
         return useQuery({
             queryKey: ['forms', aoiId, submittedBy, photoId, { page, limit, search }],
             queryFn: () => editorService.getForms(aoiId, submittedBy, photoId, page, limit, search),
+            placeholderData: keepPreviousData,
         });
     };
 

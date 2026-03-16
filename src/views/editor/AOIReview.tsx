@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 function AOIStats({ aoiId }: { aoiId: string }) {
     const { useAoiStats } = useEditor();
@@ -56,12 +56,21 @@ function AOIStats({ aoiId }: { aoiId: string }) {
 
 export default function AOIReview() {
     const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("ALL");
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(5);
 
+    // Debounce search query
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 500);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
+
     const { useAssignedAois } = useEditor();
-    const { data: aoisPaginated, isLoading, error } = useAssignedAois(undefined, page, limit, searchQuery);
+    const { data: aoisPaginated, isLoading, error } = useAssignedAois(undefined, page, limit, debouncedSearchQuery);
 
     const aoisList = aoisPaginated?.data || aoisPaginated || [];
     const totalAois = aoisPaginated?.total || 0;
@@ -73,38 +82,6 @@ export default function AOIReview() {
             return matchesStatus;
         });
     }, [aoisList, statusFilter]);
-
-    if (isLoading) {
-        return (
-            <div className="p-8 space-y-4 w-full max-w-[1400px]">
-                <div className="mb-10 space-y-2">
-                    <Skeleton className="h-12 w-64 rounded-lg" />
-                    <Skeleton className="h-5 w-80 rounded-md" />
-                </div>
-                {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-32 w-full rounded-2xl" />
-                ))}
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="p-8 w-full max-w-[1400px]">
-                <div className="bg-rose-50 border border-rose-100 rounded-3xl p-12 text-center">
-                    <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-4" />
-                    <h2 className="text-xl font-bold text-rose-900 mb-2">Failed to load AOIs</h2>
-                    <p className="text-rose-600 mb-6">There was an issue fetching the assigned areas.</p>
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="bg-rose-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-rose-700 transition-colors"
-                    >
-                        Retry
-                    </button>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className="p-3 lg:p-4 space-y-10 w-full max-w-7xl">
@@ -149,7 +126,13 @@ export default function AOIReview() {
                     </div>
                 </div>
 
-                {filteredAois.length === 0 ? (
+                {isLoading ? (
+                    <div className="space-y-4">
+                        {[1, 2, 3].map((i) => (
+                            <Skeleton key={i} className="h-32 w-full rounded-2xl" />
+                        ))}
+                    </div>
+                ) : filteredAois.length === 0 ? (
                     <Card className="p-20 text-center border-dashed border-2 bg-gray-50/50 rounded-[32px]">
                         <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                         <p className="text-gray-500 font-medium">No survey areas matching your filters.</p>

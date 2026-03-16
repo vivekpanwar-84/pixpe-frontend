@@ -19,7 +19,9 @@ import {
     XCircle,
     FileText,
     Phone,
-    ArrowRight
+    ArrowRight,
+    CheckSquare,
+    Square
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,6 +52,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useManager } from "@/hooks/useManager";
 import { useAdmin } from "@/hooks/useAdmin";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -64,7 +67,7 @@ export default function POIManagement({ aoiId }: POIManagementProps) {
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(20);
 
-    const { useAllPhotos, assignPhoto, updatePhotoStatus } = useManager();
+    const { useAllPhotos, assignPhoto, updatePhotoStatus, bulkAssignPhotos } = useManager();
     const { useAllUsers } = useAdmin();
     const { data: photosPaginated, isLoading: photosLoading } = useAllPhotos({ aoiId, page, limit, search: searchQuery });
     const { data: usersPaginated } = useAllUsers("editor");
@@ -78,6 +81,9 @@ export default function POIManagement({ aoiId }: POIManagementProps) {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
     const [isFormDetailOpen, setIsFormDetailOpen] = useState(false);
     const [selectedForm, setSelectedForm] = useState<any>(null);
+    const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
+    const [isBulkAssignModalOpen, setIsBulkAssignModalOpen] = useState(false);
+    const [bulkEditor, setBulkEditor] = useState<string>("");
 
     const handleAssign = async () => {
         if (!selectedPhoto || !selectedEditor) return;
@@ -94,6 +100,42 @@ export default function POIManagement({ aoiId }: POIManagementProps) {
         } catch (error) {
             toast.error("Failed to assign photo");
         }
+    };
+
+    const handleBulkAssign = async () => {
+        if (selectedPhotoIds.length === 0 || !bulkEditor) return;
+
+        try {
+            const result = await bulkAssignPhotos.mutateAsync({
+                photoIds: selectedPhotoIds,
+                editorId: bulkEditor
+            });
+            toast.success(`${result.updated} photos assigned successfully`);
+            setIsBulkAssignModalOpen(false);
+            setSelectedPhotoIds([]);
+            setBulkEditor("");
+        } catch (error) {
+            toast.error("Failed to bulk assign photos");
+        }
+    };
+
+    const togglePhotoSelection = (photoId: string) => {
+        setSelectedPhotoIds(prev =>
+            prev.includes(photoId)
+                ? prev.filter(id => id !== photoId)
+                : [...prev, photoId]
+        );
+    };
+
+    const pendingPhotos = (photosPaginated?.data || photosPaginated || []).filter((p: any) => p.status === 'PENDING');
+
+    const selectAllPending = () => {
+        const pendingIds = pendingPhotos.map((p: any) => p.id);
+        setSelectedPhotoIds(prev => {
+            const allSelected = pendingIds.every((id: string) => prev.includes(id));
+            if (allSelected) return prev.filter((id: string) => !pendingIds.includes(id));
+            return Array.from(new Set([...prev, ...pendingIds]));
+        });
     };
 
     const handleApprove = async (photo: any) => {
@@ -175,6 +217,17 @@ export default function POIManagement({ aoiId }: POIManagementProps) {
                     </div>
                 )}
                 <div className="flex flex-wrap items-center gap-3">
+                    {pendingPhotos.length > 0 && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className={`h-9 font-medium ${pendingPhotos.every((p: any) => selectedPhotoIds.includes(p.id)) && pendingPhotos.length > 0 ? 'bg-blue-50 border-blue-300 text-blue-700' : ''}`}
+                            onClick={selectAllPending}
+                        >
+                            <CheckSquare className="w-4 h-4 mr-1.5" />
+                            {pendingPhotos.every((p: any) => selectedPhotoIds.includes(p.id)) && pendingPhotos.length > 0 ? 'Deselect All' : `Select All Pending (${pendingPhotos.length})`}
+                        </Button>
+                    )}
                     <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
                         <Button
                             variant={viewMode === 'grid' ? "outline" : "ghost"}
@@ -220,18 +273,38 @@ export default function POIManagement({ aoiId }: POIManagementProps) {
                     ))}
                 </div>
             ) : filteredPhotos?.length === 0 ? (
-                <Card className="p-12 text-center">
-                    <div className="bg-gray-50 p-4 rounded-full w-fit mx-auto mb-4">
-                        <Camera className="w-8 h-8 text-gray-400" />
+                <Card className="p-16 text-center border-dashed border-2 border-gray-200 bg-gradient-to-b from-gray-50/50 to-white">
+                    <div className="bg-gradient-to-br from-blue-100 to-indigo-100 p-5 rounded-2xl w-fit mx-auto mb-5 shadow-sm">
+                        <Camera className="w-10 h-10 text-blue-500" />
                     </div>
-                    <h3 className="text-lg font-semibold">No Photos Found</h3>
-                    <p className="text-gray-500">There are no photos to manage at the moment.</p>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">No Photos Found</h3>
+                    <p className="text-gray-500 text-sm max-w-md mx-auto leading-relaxed">There are no photos to manage at the moment. Photos will appear here once a surveyor uploads them for this AOI.</p>
                 </Card>
             ) : viewMode === 'grid' ? (
+                <>
+                {pendingPhotos.length > 0 && selectedPhotoIds.length === 0 && (
+                    <div className="mb-4 p-3 bg-blue-50/80 border border-blue-100 rounded-xl flex items-center gap-3">
+                        <div className="bg-blue-100 p-1.5 rounded-lg">
+                            <CheckSquare className="w-4 h-4 text-blue-600" />
+                        </div>
+                        <p className="text-sm text-blue-700 font-medium">
+                            <span className="font-bold">{pendingPhotos.length} pending</span> photo{pendingPhotos.length > 1 ? 's' : ''} available — use checkboxes or "Select All Pending" to bulk assign an editor
+                        </p>
+                    </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredPhotos?.map((photo: any) => (
-                        <Card key={photo.id} className="overflow-hidden hover:shadow-lg transition-shadow border-gray-200">
+                        <Card key={photo.id} className={`overflow-hidden hover:shadow-lg transition-shadow ${selectedPhotoIds.includes(photo.id) ? 'border-blue-400 ring-2 ring-blue-200' : 'border-gray-200'}`}>
                             <div className="relative h-48 group">
+                                {photo.status === 'PENDING' && (
+                                    <div className="absolute top-3 left-3 z-20" onClick={(e) => e.stopPropagation()}>
+                                        <Checkbox
+                                            checked={selectedPhotoIds.includes(photo.id)}
+                                            onCheckedChange={() => togglePhotoSelection(photo.id)}
+                                            className="h-5 w-5 border-2 border-white bg-white/80 shadow-md data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                                        />
+                                    </div>
+                                )}
                                 <ImageWithLoader
                                     src={photo.photo_url}
                                     alt="POI"
@@ -347,11 +420,21 @@ export default function POIManagement({ aoiId }: POIManagementProps) {
                         </Card>
                     ))}
                 </div>
+                </>
             ) : (
                 <div className="space-y-4">
                     {filteredPhotos?.map((photo: any) => (
-                        <Card key={photo.id} className="overflow-hidden hover:shadow-md transition-shadow border-gray-200">
+                        <Card key={photo.id} className={`overflow-hidden hover:shadow-md transition-shadow ${selectedPhotoIds.includes(photo.id) ? 'border-blue-400 ring-2 ring-blue-200' : 'border-gray-200'}`}>
                             <div className="flex flex-col md:flex-row md:items-center gap-4 p-4">
+                                {photo.status === 'PENDING' && (
+                                    <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                                        <Checkbox
+                                            checked={selectedPhotoIds.includes(photo.id)}
+                                            onCheckedChange={() => togglePhotoSelection(photo.id)}
+                                            className="h-5 w-5 border-2 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                                        />
+                                    </div>
+                                )}
                                 <div
                                     className="relative w-24 h-24 md:w-32 md:h-24 flex-shrink-0 rounded-md overflow-hidden"
                                 >
@@ -834,6 +917,86 @@ export default function POIManagement({ aoiId }: POIManagementProps) {
                             <Button variant="outline" onClick={() => setIsFormDetailOpen(false)} className="mt-4 px-8">Close</Button>
                         </div>
                     )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Bulk Assign Floating Action Bar */}
+            {selectedPhotoIds.length > 0 && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-white rounded-xl shadow-2xl border border-gray-200 px-6 py-3 flex items-center gap-4 animate-in slide-in-from-bottom-4">
+                    <div className="flex items-center gap-2">
+                        <div className="bg-blue-100 text-blue-700 font-bold text-sm px-2.5 py-1 rounded-lg">
+                            {selectedPhotoIds.length}
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">photos selected</span>
+                    </div>
+                    <div className="w-px h-8 bg-gray-200" />
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold h-9 px-4"
+                        onClick={() => setIsBulkAssignModalOpen(true)}
+                    >
+                        <UserPlus className="w-4 h-4 mr-1.5" />
+                        Assign to Editor
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-gray-500 hover:text-gray-700 h-9"
+                        onClick={() => setSelectedPhotoIds([])}
+                    >
+                        <XCircle className="w-4 h-4 mr-1" />
+                        Clear
+                    </Button>
+                </div>
+            )}
+
+            {/* Bulk Assign Modal */}
+            <Dialog open={isBulkAssignModalOpen} onOpenChange={setIsBulkAssignModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Bulk Assign Photos to Editor</DialogTitle>
+                        <DialogDescription>
+                            Assign {selectedPhotoIds.length} selected photo{selectedPhotoIds.length > 1 ? 's' : ''} to an editor for review.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Select Editor</label>
+                            <Select onValueChange={setBulkEditor} value={bulkEditor}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Choose an editor..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {editors?.map((editor: any) => (
+                                        <SelectItem key={editor.id} value={editor.id}>
+                                            <div className="flex flex-col">
+                                                <span>{editor.name}</span>
+                                                <span className="text-xs text-gray-500">{editor.email}</span>
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <div className="flex items-center gap-2 text-sm text-blue-700 font-medium">
+                                <CheckSquare className="w-4 h-4" />
+                                <span>{selectedPhotoIds.length} photo{selectedPhotoIds.length > 1 ? 's' : ''} will be assigned</span>
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => { setIsBulkAssignModalOpen(false); setBulkEditor(""); }}>
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleBulkAssign}
+                            disabled={!bulkEditor || bulkAssignPhotos.isPending}
+                        >
+                            {bulkAssignPhotos.isPending ? "Assigning..." : `Assign ${selectedPhotoIds.length} Photo${selectedPhotoIds.length > 1 ? 's' : ''}`}
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

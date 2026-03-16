@@ -52,6 +52,11 @@ export const managerService = {
         return response.data;
     },
 
+    bulkAssignPhotos: async (photoIds: string[], editorId: string) => {
+        const response = await api.patch('/photos/bulk-assign', { photo_ids: photoIds, editor_id: editorId });
+        return response.data;
+    },
+
     updatePhotoStatus: async (id: string, data: any) => {
         const response = await api.patch(`/photos/${id}/status`, data);
         return response.data;
