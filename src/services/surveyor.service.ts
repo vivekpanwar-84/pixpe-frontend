@@ -2,13 +2,18 @@ import api from './api';
 
 export const surveyorService = {
     // AOIs
-    getAssignedAois: async (page: number = 1, limit: number = 20, search?: string) => {
+    getAssignedAois: async (page: number = 1, limit: number = 50, search?: string) => {
         const response = await api.get('/aoi/assigned', { params: { page, limit, search } });
         return response.data;
     },
 
-    getAllAois: async (unassigned?: boolean) => {
-        const response = await api.get('/aoi', { params: { unassigned } });
+    getAllAois: async (unassigned?: boolean, limit: number = 20, search?: string) => {
+        const response = await api.get('/aoi', { params: { unassigned, limit, search } });
+        return response.data;
+    },
+
+    getMyStats: async () => {
+        const response = await api.get('/aoi/my-stats');
         return response.data;
     },
 

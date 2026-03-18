@@ -1,6 +1,6 @@
 "use client";
-import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useMemo, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { surveyorService } from "@/services/surveyor.service";
 import AOIMultiMap from "@/components/AOIMultiMap";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,17 +17,65 @@ import { useAuth } from "@/hooks/useAuth";
 export default function AOIMapView() {
     const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
     const [selectedState, setSelectedState] = useState("all");
     const [typeFilter, setTypeFilter] = useState<"all" | "mine" | "available">("all");
     const [selectedAoi, setSelectedAoi] = useState<any>(null);
     const [focusedAoiId, setFocusedAoiId] = useState<string | null>(null);
+
+    // Pagination state for Sidebar list
+    const [listPage, setListPage] = useState(1);
+    const ITEMS_PER_PAGE = 100;
+
     const { useProfile } = useAuth();
     const { data: profile } = useProfile();
 
-    const { data: aois, isLoading, error } = useQuery({
-        queryKey: ["all-viewable-aois"],
-        queryFn: () => surveyorService.getAllAois(false),
+    // Debounce search query
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 500);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
+
+    // Reset pagination to page 1 on search or filter change
+    useEffect(() => {
+        setListPage(1);
+    }, [debouncedSearchQuery, selectedState, typeFilter]);
+
+    // Fetch unassigned AOIs (available for request) — /aoi?unassigned=true
+    const { data: unassignedAoisData, isLoading: isLoadingUnassigned, error: unassignedError } = useQuery({
+        queryKey: ["unassigned-aois", debouncedSearchQuery],
+        queryFn: () => surveyorService.getAllAois(true, 1000, debouncedSearchQuery),
+        placeholderData: keepPreviousData,
     });
+
+    // Fetch surveyor's own assigned AOIs — /aoi/assigned
+    const { data: myAssignedData, isLoading: isLoadingAssigned, error: assignedError } = useQuery({
+        queryKey: ["aois", "assigned", { limit: 1000, search: debouncedSearchQuery }],
+        queryFn: () => surveyorService.getAssignedAois(1, 1000, debouncedSearchQuery),
+        placeholderData: keepPreviousData,
+    });
+
+    // Merge both lists, deduplicate by id
+    const aois = useMemo(() => {
+        const unassignedList: any[] = Array.isArray(unassignedAoisData)
+            ? unassignedAoisData
+            : (unassignedAoisData?.data || []);
+        const assignedList: any[] = Array.isArray(myAssignedData)
+            ? myAssignedData
+            : (myAssignedData?.data || []);
+
+        const seen = new Set<string>();
+        return [...unassignedList, ...assignedList].filter((aoi) => {
+            if (seen.has(aoi.id)) return false;
+            seen.add(aoi.id);
+            return true;
+        });
+    }, [unassignedAoisData, myAssignedData]);
+
+    const isLoading = isLoadingUnassigned || isLoadingAssigned;
+    const error = unassignedError || assignedError;
 
     const { data: myRequests } = useQuery({
         queryKey: ["my-aoi-requests"],
@@ -47,16 +95,12 @@ export default function AOIMapView() {
     });
 
     const states = useMemo(() => {
-        if (!aois) return [];
-        const safeAois = Array.isArray(aois) ? aois : (aois?.data || []);
-        const uniqueStates = new Set(safeAois.map((aoi: any) => aoi.state).filter(Boolean));
+        const uniqueStates = new Set(aois.map((aoi: any) => aoi.state).filter(Boolean));
         return Array.from(uniqueStates).sort() as string[];
     }, [aois]);
 
     const filteredAois = useMemo(() => {
-        if (!aois) return [];
-        const safeAois = Array.isArray(aois) ? aois : (aois?.data || []);
-        return safeAois.filter((aoi: any) => {
+        return aois.filter((aoi: any) => {
             const matchesSearch =
                 aoi.aoi_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 aoi.aoi_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -74,6 +118,11 @@ export default function AOIMapView() {
             return matchesSearch && matchesState && matchesType && (isUnassigned || isMine);
         });
     }, [aois, searchQuery, selectedState, typeFilter, profile?.id]);
+
+    const paginatedAois = useMemo(() => {
+        const start = (listPage - 1) * ITEMS_PER_PAGE;
+        return filteredAois.slice(start, start + ITEMS_PER_PAGE);
+    }, [filteredAois, listPage]);
 
 
     const handleRequest = (aoiId: string) => {
@@ -185,7 +234,7 @@ export default function AOIMapView() {
                         <div className="absolute bottom-4 left-4 z-[10] bg-white/90 backdrop-blur-sm p-3 rounded-lg border border-gray-200 shadow-lg text-xs space-y-2">
                             <p className="font-semibold text-gray-700 border-b pb-1 mb-1">Status Legend</p>
                             <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                                <span className="w-3 h-3 rounded-full bg-green-500"></span>
                                 <span>Your Assigned Areas</span>
                             </div>
                             <div className="flex items-center gap-2">
@@ -216,7 +265,7 @@ export default function AOIMapView() {
                             </div>
                         ) : (
                             <div className="divide-y divide-gray-100">
-                                {filteredAois.map((aoi: any) => {
+                                {paginatedAois.map((aoi: any) => {
                                     const request = getRequestStatus(aoi.id);
                                     return (
                                         <div key={aoi.id} className="p-4 hover:bg-gray-50 transition-colors group">
@@ -287,6 +336,33 @@ export default function AOIMapView() {
                             </div>
                         )}
                     </CardContent>
+
+                    {/* Sidebar Pagination */}
+                    {filteredAois.length > ITEMS_PER_PAGE && (
+                        <div className="p-4 border-t bg-gray-50 flex items-center justify-between mt-auto">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setListPage((p) => Math.max(1, p - 1))}
+                                disabled={listPage === 1}
+                                className="h-8 text-xs disabled:opacity-50"
+                            >
+                                Previous
+                            </Button>
+                            <span className="text-xs text-gray-500">
+                                Page {listPage} of {Math.ceil(filteredAois.length / ITEMS_PER_PAGE)}
+                            </span>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setListPage((p) => Math.min(Math.ceil(filteredAois.length / ITEMS_PER_PAGE), p + 1))}
+                                disabled={listPage >= Math.ceil(filteredAois.length / ITEMS_PER_PAGE)}
+                                className="h-8 text-xs disabled:opacity-50"
+                            >
+                                Next
+                            </Button>
+                        </div>
+                    )}
                 </Card>
             </div>
         </div>

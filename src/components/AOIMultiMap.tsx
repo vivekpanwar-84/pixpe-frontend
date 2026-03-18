@@ -19,8 +19,9 @@ const greenIcon = createIcon('green');
 const greyIcon = createIcon('grey');
 const yellowIcon = createIcon('yellow');
 
-const getStatusIcon = (status: string, isAssigned: boolean) => {
+const getStatusIcon = (status: string, isAssigned: boolean, isMine: boolean) => {
     if (!isAssigned) return yellowIcon;
+    if (isMine) return greenIcon;
     switch (status) {
         case 'COMPLETED':
         case 'CLOSED':
@@ -79,7 +80,9 @@ export default function AOIMultiMap({ aois, onSelectAoi, focusedAoiId, currentUs
 
     const getAoiColor = (aoi: AOI) => {
         if (!aoi.assigned_to_surveyor_id) return "#eab308"; // yellow-500
-        return aoi.status === 'COMPLETED' ? "#10b981" : "#3b82f6"; // emerald-500 or blue-500
+        const isMine = aoi.assigned_to_surveyor_id === currentUserId;
+        if (isMine) return "#10b981"; // emerald-500/green
+        return aoi.status === 'COMPLETED' ? "#10b981" : "#3b82f6"; // or blue-500
     };
 
     return (
@@ -111,7 +114,7 @@ export default function AOIMultiMap({ aois, onSelectAoi, focusedAoiId, currentUs
                         )}
                         <Marker
                             position={[Number(aoi.center_latitude), Number(aoi.center_longitude)]}
-                            icon={getStatusIcon(aoi.status, !!aoi.assigned_to_surveyor_id)}
+                            icon={getStatusIcon(aoi.status, !!aoi.assigned_to_surveyor_id, aoi.assigned_to_surveyor_id === currentUserId)}
                             eventHandlers={{
                                 click: () => onSelectAoi?.(aoi)
                             }}

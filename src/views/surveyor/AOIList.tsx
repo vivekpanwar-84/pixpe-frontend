@@ -19,7 +19,7 @@ export default function AOIList() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(50);
 
   // Debounce search query
   useEffect(() => {

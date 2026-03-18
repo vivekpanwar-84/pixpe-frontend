@@ -25,11 +25,12 @@ export default function SurveyorHome() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [profileData, aois, uploads, balanceData] = await Promise.all([
+        const [profileData, aois, uploads, balanceData, statsData] = await Promise.all([
           userService.getProfile(),
           surveyorService.getAssignedAois(),
           surveyorService.getMyUploads(),
           surveyorService.getMyBalance(),
+          surveyorService.getMyStats(),
         ]);
 
         setProfile(profileData);
@@ -49,9 +50,9 @@ export default function SurveyorHome() {
         const completedAois = safeAois.filter((a: any) => a.status === 'CLOSED' || a.status === 'SUBMITTED').length;
 
         setKpis([
-          { icon: MapPin, label: "Active AOIs", value: safeAois.length.toString(), color: "text-blue-600", bg: "bg-blue-50" },
+          { icon: MapPin, label: "Active AOIs", value: (statsData?.activeAois || 0).toString(), color: "text-blue-600", bg: "bg-blue-50" },
           { icon: Camera, label: "Photos Today", value: photosToday.toString(), color: "text-green-600", bg: "bg-green-50" },
-          { icon: CheckCircle, label: "Completed", value: completedAois.toString(), color: "text-purple-600", bg: "bg-purple-50" },
+          { icon: CheckCircle, label: "Completed", value: (statsData?.completedAois || 0).toString(), color: "text-purple-600", bg: "bg-purple-50" },
           { icon: Award, label: "Total Pixpoints", value: `${balanceData?.total_pixpoints || 0}`, color: "text-orange-600", bg: "bg-orange-50" },
         ]);
 
