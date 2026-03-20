@@ -71,6 +71,28 @@ export function NotificationBell() {
         }
     };
 
+    const handleMarkAllAsRead = async () => {
+        try {
+            await notificationService.markAllAsRead();
+            setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+            setUnreadCount(0);
+            toast.success('All marked as read');
+        } catch (error) {
+            console.error('Failed to mark all as read', error);
+        }
+    };
+
+    const handleClearAll = async () => {
+        try {
+            await notificationService.clearAllNotifications();
+            setNotifications([]);
+            setUnreadCount(0);
+            toast.success('All notifications cleared');
+        } catch (error) {
+            console.error('Failed to clear notifications', error);
+        }
+    };
+
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -88,10 +110,32 @@ export function NotificationBell() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80 p-0">
                 <DropdownMenuLabel className="p-4 flex items-center justify-between">
-                    <span className="font-bold text-sm">Notifications</span>
-                    {unreadCount > 0 && (
-                        <span className="text-[10px] text-muted-foreground font-normal">{unreadCount} unread</span>
-                    )}
+                    <div className="flex flex-col">
+                        <span className="font-bold text-sm">Notifications</span>
+                        {unreadCount > 0 && (
+                            <span className="text-[10px] text-muted-foreground font-normal">{unreadCount} unread</span>
+                        )}
+                    </div>
+                    <div className="flex gap-1">
+                        {unreadCount > 0 && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-1.5 text-[9px] text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                onClick={handleMarkAllAsRead}
+                            >
+                                Read All
+                            </Button>
+                        )}
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-1.5 text-[9px] text-red-600 hover:text-red-800 hover:bg-red-50"
+                            onClick={handleClearAll}
+                        >
+                            Clear All
+                        </Button>
+                    </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <ScrollArea className="h-80">

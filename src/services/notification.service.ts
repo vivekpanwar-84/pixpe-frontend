@@ -10,4 +10,14 @@ export const notificationService = {
         const response = await api.post(`/system/notifications/${id}/read`);
         return response.data;
     },
+
+    markAllAsRead: async () => {
+        const response = await api.post('/system/notifications/all/read');
+        return response.data;
+    },
+
+    clearAllNotifications: async () => {
+        const response = await api.post('/system/notifications/all/clear');
+        return response.data;
+    },
 };

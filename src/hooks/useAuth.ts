@@ -41,8 +41,10 @@ export const useAuth = () => {
     const signupMutation = useMutation({
         mutationFn: authService.signup,
         onSuccess: (data) => {
-            // Auto login after signup
-            syncLogin(data.user, data.access_token);
+            // Setup pending or do nothing, wait for OTP verification
+            if (setPendingUser) {
+                setPendingUser(data.user);
+            }
         },
     });
 

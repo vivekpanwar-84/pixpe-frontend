@@ -23,13 +23,76 @@ const kycSchema = z.object({
     state: z.string().min(2, "State is required"),
     pin_code: z.string().min(6, "Valid PIN code is required"),
     document_type: z.enum(["AADHAAR", "PAN", "DRIVING_LICENSE", "VOTER_ID"]),
-    document_number: z.string().min(5, "Document number is required"),
+    document_number: z.string().min(1, "Document number is required"),
     document_front_url: z.string().min(1, "Front document is required"),
     document_back_url: z.string().min(1, "Back document is required"),
     selfie_url: z.string().min(1, "Selfie is required"),
-    bank_account_number: z.string().min(10, "Valid account number is required"),
-    ifsc_code: z.string().min(4, "Valid IFSC code is required"),
+    bank_account_number: z.string().min(1, "Account number is required"),
+    ifsc_code: z.string().min(1, "IFSC code is required"),
     bank_proof_url: z.string().min(1, "Bank proof is required"),
+}).superRefine((data, ctx) => {
+    // 1. Document Number Validation
+    if (data.document_type === "AADHAAR") {
+        if (!/^\d{12}$/.test(data.document_number)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Aadhaar must be exactly 12 digits",
+                path: ["document_number"],
+            });
+        }
+    } else if (data.document_type === "PAN") {
+        if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(data.document_number)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Invalid PAN format (e.g., ABCDE1234F)",
+                path: ["document_number"],
+            });
+        }
+    } else if (data.document_type === "DRIVING_LICENSE") {
+        if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11}$/.test(data.document_number)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Invalid Driving License format (15 chars)",
+                path: ["document_number"],
+            });
+        }
+    } else if (data.document_type === "VOTER_ID") {
+        if (!/^[A-Z]{3}[0-9]{7}$/.test(data.document_number)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Invalid Voter ID format (e.g., ABC1234567)",
+                path: ["document_number"],
+            });
+        }
+    }
+
+    // 2. Bank Account Number Validation
+    if (data.bank_account_number) {
+        if (!/^\d+$/.test(data.bank_account_number)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Account number must contain only digits",
+                path: ["bank_account_number"],
+            });
+        } else if (data.bank_account_number.length < 9 || data.bank_account_number.length > 18) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Account number must be between 9 and 18 digits",
+                path: ["bank_account_number"],
+            });
+        }
+    }
+
+    // 3. IFSC Code Validation
+    if (data.ifsc_code) {
+        if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(data.ifsc_code)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Invalid IFSC format (e.g., ABCD0123456)",
+                path: ["ifsc_code"],
+            });
+        }
+    }
 });
 
 type KYCFormValues = z.infer<typeof kycSchema>;
@@ -165,8 +228,13 @@ export default function KYCForm() {
             toast.success("KYC submitted successfully!");
             router.push("/kyc-status");
         } catch (error: any) {
-            toast.error(error.message || "Failed to submit KYC");
-            console.error(error);
+            const errorData = error.response?.data;
+            const message = typeof errorData === 'object' && errorData?.message 
+                ? (Array.isArray(errorData.message) ? errorData.message.join(', ') : errorData.message)
+                : (error.message || "Failed to submit KYC");
+                
+            toast.error(`Submission Error: ${message}`);
+            console.error("Full KYC Error Details:", errorData || error);
         } finally {
             setLoading(false);
         }
